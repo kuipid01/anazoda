@@ -5,3 +5,4 @@ node_modules
 .next-dev.err.log
 npm-debug.log*
 .brand-frames
+.env

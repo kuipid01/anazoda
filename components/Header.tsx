@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
+import { Heart, Menu, Search, ShoppingBag, Trash2, UserRound, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getCart, getWishlist, removeFromCart, removeFromWishlist, updateCartQuantity, addToCart, CartItem, WishlistItem } from "@/lib/cart";
 
@@ -142,12 +142,12 @@ export default function Header() {
                         <p className="item-price">
                           {new Intl.NumberFormat("en-NG", { style: "currency", currency: item.currency, maximumFractionDigits: 0 }).format(item.price / 100)}
                         </p>
-                        <div className="item-actions">
+                        <div className="item-actions" style={{ alignItems: 'center' }}>
                           <button onClick={() => {
                             addToCart({ ...item });
                             removeFromWishlist(item.id);
                           }}>Add to Cart</button>
-                          <button onClick={() => removeFromWishlist(item.id)} className="text-remove">Remove</button>
+                          <button onClick={() => removeFromWishlist(item.id)} className="text-remove" style={{ marginLeft: 'auto' }} aria-label="Remove from wishlist"><Trash2 size={16} /></button>
                         </div>
                       </div>
                     </div>
@@ -187,7 +187,7 @@ export default function Header() {
                             <button onClick={() => updateCartQuantity(item.id, item.quantity - 1)}>-</button>
                             <span>{item.quantity}</span>
                             <button onClick={() => updateCartQuantity(item.id, item.quantity + 1)}>+</button>
-                            <button onClick={() => removeFromCart(item.id)} className="text-remove" style={{ marginLeft: 'auto' }}>Remove</button>
+                            <button onClick={() => removeFromCart(item.id)} className="text-remove" style={{ marginLeft: 'auto' }} aria-label="Remove from cart"><Trash2 size={16} /></button>
                           </div>
                         </div>
                       </div>

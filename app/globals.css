@@ -403,7 +403,8 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
 .item-qty span { font-size: 12px; font-weight: 600; min-width: 15px; text-align: center; }
 .item-actions { display: flex; gap: 15px; margin-top: 8px; font-size: 11px; flex-wrap: wrap; }
 .item-actions button { background: none; border: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; color: var(--purple); padding: 0; }
-.text-remove { color: #a03a50 !important; font-size: 11px; font-weight: 500 !important; cursor: pointer; border: 0; background: none; padding: 0; }
+.text-remove { color: #a03a50 !important; cursor: pointer; border: 0; background: none; padding: 4px; display: grid; place-items: center; transition: color 0.3s; }
+.text-remove:hover { color: var(--purple-bright) !important; }
 
 .drawer-footer { margin-top: auto; padding-top: 30px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; }
 .subtotal { display: flex; justify-content: space-between; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }

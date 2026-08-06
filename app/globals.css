@@ -340,30 +340,30 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
 .search-bar-overlay input:focus { border-color: var(--purple-bright); }
 .search-bar-overlay button { background: none; border: 0; cursor: pointer; color: var(--ink); }
 
-.side-drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 999; display: flex; justify-content: flex-end; animation: fade-in 0.3s ease-out; }
-.side-drawer { width: min(420px, 100%); height: 100%; background: #fff; box-shadow: -10px 0 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; animation: slide-in 0.3s ease-out; }
+.side-drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 999; display: flex; justify-content: flex-end; animation: fade-in 0.3s ease-out; overflow: hidden; }
+.side-drawer { width: min(420px, 100%); height: 100%; background: #fff; box-shadow: -10px 0 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; animation: slide-in 0.3s ease-out; overflow-x: hidden; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
 .drawer-header { padding: 25px 30px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
 .drawer-header h2 { font: 500 24px "Cormorant Garamond", serif; margin: 0; text-transform: uppercase; }
 .drawer-header button { background: none; border: 0; cursor: pointer; }
-.drawer-content { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; }
+.drawer-content { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; width: 100%; }
 .empty-message { text-align: center; color: #888; margin: auto; font-size: 13px; }
 
-.drawer-items { display: flex; flex-direction: column; gap: 25px; }
-.drawer-item { display: flex; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--cream); }
+.drawer-items { display: flex; flex-direction: column; gap: 25px; width: 100%; }
+.drawer-item { display: flex; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--cream); width: 100%; }
 .drawer-item:last-child { border-bottom: 0; }
 .item-img { flex-shrink: 0; width: 60px; height: 75px; position: relative; background: var(--cream); }
 .item-img img { object-fit: cover; }
-.item-details { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
-.item-details h4 { font: 500 16px "Cormorant Garamond", serif; margin: 0; text-transform: uppercase; }
+.item-details { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.item-details h4 { font: 500 16px "Cormorant Garamond", serif; margin: 0; text-transform: uppercase; overflow-wrap: break-word; word-wrap: break-word; }
 .item-details h4 a:hover { color: var(--purple-bright); }
 .item-price { font-size: 12px; color: var(--purple); font-weight: 500; margin: 0; }
-.item-qty { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.item-qty { display: flex; align-items: center; gap: 12px; margin-top: 8px; width: 100%; }
 .item-qty button { width: 24px; height: 24px; border: 1px solid var(--line); background: none; font-size: 14px; cursor: pointer; display: grid; place-items: center; }
 .item-qty span { font-size: 12px; font-weight: 600; min-width: 15px; text-align: center; }
-.item-actions { display: flex; gap: 15px; margin-top: 8px; font-size: 11px; }
+.item-actions { display: flex; gap: 15px; margin-top: 8px; font-size: 11px; flex-wrap: wrap; }
 .item-actions button { background: none; border: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; color: var(--purple); padding: 0; }
 .text-remove { color: #a03a50 !important; font-size: 11px; font-weight: 500 !important; cursor: pointer; border: 0; background: none; padding: 0; }
 
@@ -402,4 +402,25 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
 /* Shop mobile filter drawer styles */
 .mobile-filter-trigger { display: none; }
 .sidebar-header-mobile { display: none; }
+
+/* Small viewports cart and wishlist drawer responsive scaling */
+@media (max-width: 480px) {
+  .drawer-header { padding: 18px 15px; }
+  .drawer-header h2 { font-size: 19px; }
+  .drawer-content { padding: 20px 15px; }
+  .drawer-items { gap: 20px; }
+  .drawer-item { gap: 12px; padding-bottom: 15px; }
+  .item-img { width: 50px; height: 62px; }
+  .item-details { gap: 2px; }
+  .item-details h4 { font-size: 14px; }
+  .item-qty { gap: 8px; margin-top: 6px; }
+  .item-qty button { width: 22px; height: 22px; font-size: 12px; }
+  .item-qty span { font-size: 11px; min-width: 12px; }
+  .item-actions { gap: 10px; margin-top: 6px; }
+  .text-remove { font-size: 10px; }
+  .drawer-footer { padding-top: 20px; gap: 15px; }
+  .subtotal strong { font-size: 16px; }
+  .checkout-btn { padding: 15px 10px; font-size: 10px; }
+}
+
 

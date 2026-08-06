@@ -1,21 +1,47 @@
 "use client";
 
-import { FormEvent } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { whatsappUrl } from "./WhatsAppButton";
+import { getCart, clearCart, CartItem } from "@/lib/cart";
 
 const services = ["Traditional Dress", "Civil Wedding Dress", "After Party Dress", "Bridal Robe", "Wedding Guest Dress", "Photoshoot Dress", "Birthday Dress", "Prom Dress", "Other"];
 
 type SelectedProduct = { name: string; price: string } | null;
 
 export default function ConsultationForm({ selectedProduct = null }: { selectedProduct?: SelectedProduct }) {
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  useEffect(() => {
+    setCartItems(getCart());
+  }, []);
+
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const servicesChosen = form.getAll("services").join(", ") || "Not specified";
+    
+    const cartDetails: string[] = [];
+    if (cartItems.length > 0) {
+      cartDetails.push("Enquiry Items:");
+      cartItems.forEach((item) => {
+        const formattedPrice = new Intl.NumberFormat("en-NG", { style: "currency", currency: item.currency, maximumFractionDigits: 0 }).format((item.price * item.quantity) / 100);
+        cartDetails.push(`- ${item.name} (x${item.quantity}) [${formattedPrice}]`);
+      });
+      const formattedTotal = new Intl.NumberFormat("en-NG", { style: "currency", currency: cartItems[0]?.currency || "NGN", maximumFractionDigits: 0 }).format(
+        cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) / 100
+      );
+      cartDetails.push(`Total Value: ${formattedTotal}`);
+      cartDetails.push("");
+    } else if (selectedProduct) {
+      cartDetails.push(`Selected piece: ${selectedProduct.name}`);
+      cartDetails.push(`Listed price: ${selectedProduct.price}`);
+      cartDetails.push("");
+    }
+
     const message = [
       "Hello House of Anazodo, I'd like to begin a couture consultation.",
       "",
-      ...(selectedProduct ? [`Selected piece: ${selectedProduct.name}`, `Listed price: ${selectedProduct.price}`, ""] : []),
+      ...cartDetails,
       `Name: ${form.get("name")}`,
       `Email: ${form.get("email")}`,
       `Phone: ${form.get("phone")}`,
@@ -28,7 +54,13 @@ export default function ConsultationForm({ selectedProduct = null }: { selectedP
       `Design: ${form.get("design")}`,
       `Notes: ${form.get("notes") || "None"}`
     ].join("\n");
+    
     window.open(whatsappUrl(message), "_blank", "noopener,noreferrer");
+    
+    if (cartItems.length > 0) {
+      clearCart();
+      setCartItems([]);
+    }
   }
 
   return (
@@ -38,7 +70,34 @@ export default function ConsultationForm({ selectedProduct = null }: { selectedP
         <h2>Tell us about your dream look</h2>
         <p>Complete this short form and we’ll open your request in WhatsApp, ready to send.</p>
       </div>
-      {selectedProduct && <div className="selected-product-note"><span>SELECTED PIECE</span><strong>{selectedProduct.name}</strong><p>{selectedProduct.price}</p><a href="/shop">Change selection</a></div>}
+
+      {cartItems.length > 0 ? (
+        <div className="selected-product-note" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '15px' }}>
+          <span>ITEMS IN YOUR ENQUIRY</span>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {cartItems.map((item) => (
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                <strong>{item.name} (x{item.quantity})</strong>
+                <span>
+                  {new Intl.NumberFormat("en-NG", { style: "currency", currency: item.currency, maximumFractionDigits: 0 }).format((item.price * item.quantity) / 100)}
+                </span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', fontWeight: 'bold' }}>
+              <span>Total Value:</span>
+              <span>
+                {new Intl.NumberFormat("en-NG", { style: "currency", currency: cartItems[0]?.currency || "NGN", maximumFractionDigits: 0 }).format(
+                  cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) / 100
+                )}
+              </span>
+            </div>
+          </div>
+          <a href="/shop">Edit selection / Continue shopping</a>
+        </div>
+      ) : selectedProduct ? (
+        <div className="selected-product-note"><span>SELECTED PIECE</span><strong>{selectedProduct.name}</strong><p>{selectedProduct.price}</p><a href="/shop">Change selection</a></div>
+      ) : null}
+
       <form onSubmit={submit} className="booking-form">
         <div className="field"><label htmlFor="name">Full name *</label><input id="name" name="name" required /></div>
         <div className="field"><label htmlFor="email">Your email *</label><input id="email" name="email" type="email" required /></div>

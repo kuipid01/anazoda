@@ -6,6 +6,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductGallery from "@/components/ProductGallery";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { getProduct, getProductImages, getRelatedProducts } from "@/lib/products";
+import ProductActions from "@/components/ProductActions";
 
 export const dynamic = "force-dynamic";
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -20,7 +21,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <ProductGallery images={images.map((image) => ({ id: image.id, imageUrl: image.imageUrl }))} name={product.name} />
       <section className="product-summary"><span className="stock">Available to order</span><span className="product-category">{product.category}</span><h1>{product.name}</h1><div className="detail-price">{price}</div><p>{product.description}</p>
         <small>Each piece is made with couture care. Availability and production times are confirmed during your consultation.</small>
-        <Link href={`/consultation?product=${encodeURIComponent(product.slug)}`}>Make an enquiry</Link>
+        <ProductActions product={product} />
         <div className="product-meta"><span>Category:</span> {product.category}</div>
       </section>
     </section>

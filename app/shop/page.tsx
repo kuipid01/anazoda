@@ -15,6 +15,7 @@ const one = (value: string | string[] | undefined) => Array.isArray(value) ? val
 export default async function ShopPage({ searchParams }: { searchParams: SearchParams }) {
   const raw = await searchParams;
   const category = one(raw.category);
+  const search = one(raw.search);
   const sortValue = one(raw.sort);
   const sort = sortValue === "price-asc" || sortValue === "price-desc" || sortValue === "name" ? sortValue : "newest";
   const minPrice = Number(one(raw.min));
@@ -22,13 +23,13 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
   const requestedPage = Math.max(1, Number(one(raw.page)) || 1);
   const view = one(raw.view) === "list" ? "list" : "grid";
   const data = await getShopProducts({
-    page: requestedPage, category, sort,
+    page: requestedPage, category, sort, search,
     minPrice: Number.isFinite(minPrice) && minPrice > 0 ? minPrice : undefined,
     maxPrice: Number.isFinite(maxPrice) && maxPrice > 0 ? maxPrice : undefined
   });
   const start = data.total ? (data.page - 1) * SHOP_PAGE_SIZE + 1 : 0;
   const end = Math.min(data.page * SHOP_PAGE_SIZE, data.total);
-  const preserved = { category, sort: sort === "newest" ? undefined : sort, min: one(raw.min), max: one(raw.max), view: view === "list" ? "list" : undefined };
+  const preserved = { category, sort: sort === "newest" ? undefined : sort, min: one(raw.min), max: one(raw.max), view: view === "list" ? "list" : undefined, search };
 
   return <><Header /><main className="shop-page">
     <div className="shop-toolbar">
@@ -43,6 +44,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
         <section><h2>Price</h2><form className="price-filter">
           {category && <input type="hidden" name="category" value={category} />}
           {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
+          {search && <input type="hidden" name="search" value={search} />}
           <div><label>Minimum<input type="number" name="min" min="0" defaultValue={one(raw.min)} placeholder="₦0" /></label><label>Maximum<input type="number" name="max" min="0" defaultValue={one(raw.max)} placeholder="₦5,000,000" /></label></div>
           <button type="submit">Filter</button>
         </form></section>

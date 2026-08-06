@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, lte, ne, SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, lte, ne, SQL } from "drizzle-orm";
 import { getDb } from "./db";
 import { productImages, products } from "./db/schema";
 
@@ -7,6 +7,7 @@ export const SHOP_PAGE_SIZE = 8;
 export type ShopFilters = {
   page?: number;
   category?: string;
+  search?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: "newest" | "price-asc" | "price-desc" | "name";
@@ -31,6 +32,7 @@ export async function getShopProducts(filters: ShopFilters = {}) {
   const page = Math.max(1, filters.page || 1);
   const clauses: SQL[] = [eq(products.published, true)];
   if (filters.category) clauses.push(eq(products.category, filters.category));
+  if (filters.search) clauses.push(ilike(products.name, `%${filters.search}%`));
   if (typeof filters.minPrice === "number") clauses.push(gte(products.price, Math.round(filters.minPrice * 100)));
   if (typeof filters.maxPrice === "number") clauses.push(lte(products.price, Math.round(filters.maxPrice * 100)));
   const where = and(...clauses);

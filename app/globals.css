@@ -2,8 +2,8 @@
 
 :root { --ink:#0a090b; --rose:#7c3fa0; --purple:#6f2c91; --purple-bright:#9c54c2; --silver:#d8d5dc; --cream:#f7f5f8; --line:#e7e2e9; }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin:0; color:var(--ink); background:#fff; font-family:Montserrat,Arial,sans-serif; font-size:14px; }
+html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
+body { margin:0; color:var(--ink); background:#fff; font-family:Montserrat,Arial,sans-serif; font-size:14px; overflow-x: hidden; max-width: 100%; }
 a { color:inherit; text-decoration:none; }
 button,input,select,textarea { font:inherit; }
 .topbar { height:39px; background:#050505; color:#fff; display:grid; grid-template-columns:100px 120px 1fr 160px; align-items:center; padding:0 28px; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
@@ -16,7 +16,7 @@ button,input,select,textarea { font:inherit; }
 .desktop-nav { display:flex; justify-content:center; align-items:center; gap:55px; flex-wrap:wrap; max-width:720px; margin:auto; }
 .desktop-nav .nav-item>a { font-size:11px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; display:flex; gap:7px; }
 .nav-item { position:relative; padding:18px 0; }
-.nav-dropdown { position:absolute; top:100%; left:50%; transform:translate(-50%,8px); width:210px; padding:12px 0; background:#fff; border:1px solid var(--line); box-shadow:0 16px 35px #0002; opacity:0; visibility:hidden; transition:.2s; }
+.nav-dropdown { position:absolute; top:100%; left:50%; transform:translate(-50%,8px); width:210px; padding:12px 0; background:#fff; border:1px solid var(--line); box-shadow:0 16px 35px #0002; opacity:0; visibility:hidden; transition:.2s; z-index:50; }
 .nav-dropdown:before { content:""; position:absolute; left:0; right:0; top:-12px; height:12px; }
 .nav-dropdown a { display:block; padding:12px 20px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
 .nav-dropdown a:hover { color:var(--purple); background:var(--cream); }
@@ -235,4 +235,83 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
   .admin-shell { grid-template-columns:1fr; }.admin-sidebar { position:static;height:auto;flex-direction:row;align-items:center;gap:15px;padding:18px; }.admin-sidebar nav { display:none; }.admin-sidebar form { margin-left:auto; }.admin-main { padding:35px 18px; }.admin-title h1 { font-size:36px; }.admin-title>a { display:none; }.product-admin-grid { grid-template-columns:1fr 1fr; }.new-product-card { grid-template-columns:1fr;padding:25px; }.new-product-card form { grid-template-columns:1fr; }.admin-wide { grid-column:auto; }
   .category-manager { grid-template-columns:1fr; padding:25px; gap:20px; }
   .admin-image-previews { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .pricing-grid { grid-template-columns: 1fr; gap: 25px; }
+  .pricing-card { padding: 30px 25px; }
+  .pricing-additional { grid-template-columns: 1fr; padding: 35px 25px; gap: 30px; }
+  .pricing-additional .cta-container a { max-width: 100%; }
 }
+
+/* Pricing Page Styles */
+.pricing-content { padding: 90px 8%; max-width: 1200px; margin: 0 auto; }
+.pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-bottom: 60px; }
+.pricing-card { background: #fff; border: 1px solid var(--line); padding: 40px; display: flex; flex-direction: column; transition: all 0.3s ease; }
+.pricing-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); border-color: var(--purple-bright); }
+.pricing-card h3 { font: 500 28px "Cormorant Garamond", serif; margin: 0 0 15px; text-transform: uppercase; color: var(--ink); }
+.pricing-card .price-tag { font-size: 22px; font-weight: 600; color: var(--purple); margin-bottom: 25px; }
+.pricing-card p { color: #666; line-height: 1.7; margin-bottom: 20px; }
+.pricing-card .note { font-size: 12px; color: #888; background: var(--cream); padding: 12px 18px; border-left: 2px solid var(--purple-bright); margin-top: auto; }
+.pricing-additional { background: #0b090c; color: #fff; padding: 50px; margin-top: 60px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: center; }
+.pricing-additional h3 { font: 500 28px "Cormorant Garamond", serif; color: var(--purple-bright); margin-top: 0; margin-bottom: 15px; }
+.pricing-additional p { color: #bdb7bf; line-height: 1.7; font-size: 13px; margin: 0 0 15px 0; }
+.pricing-additional p:last-child { margin-bottom: 0; }
+.pricing-additional div { display: flex; flex-direction: column; }
+.pricing-additional .cta-container { display: flex; align-items: center; justify-content: center; }
+.pricing-additional .cta-container a { display: inline-block; background: #fff; color: #000; padding: 18px 35px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; font-weight: 600; transition: background 0.3s, color 0.3s; text-align: center; width: 100%; max-width: 280px; }
+.pricing-additional .cta-container a:hover { background: var(--purple-bright); color: #fff; }
+
+/* Header Search & Drawers Styling */
+.header-actions { display: flex; align-items: center; gap: 20px; }
+.header-actions button { background: none; border: 0; padding: 0; color: inherit; cursor: pointer; display: flex; align-items: center; position: relative; }
+.header-actions svg { width: 20px; height: 20px; }
+.badge { position: absolute; top: -6px; right: -8px; background: var(--purple-bright); color: #fff; font-size: 8px; font-weight: 600; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; line-height: 1; }
+
+.search-bar-overlay { position: absolute; top: 100%; left: 0; right: 0; height: 70px; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; padding: 0 5%; z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.03); }
+.search-bar-overlay form { display: flex; width: 100%; max-width: 800px; gap: 15px; align-items: center; }
+.search-bar-overlay input { flex: 1; border: 0; border-bottom: 1px solid var(--line); padding: 10px 0; font-size: 16px; outline: none; }
+.search-bar-overlay input:focus { border-color: var(--purple-bright); }
+.search-bar-overlay button { background: none; border: 0; cursor: pointer; color: var(--ink); }
+
+.side-drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 999; display: flex; justify-content: flex-end; animation: fade-in 0.3s ease-out; }
+.side-drawer { width: min(420px, 100%); height: 100%; background: #fff; box-shadow: -10px 0 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; animation: slide-in 0.3s ease-out; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.drawer-header { padding: 25px 30px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.drawer-header h2 { font: 500 24px "Cormorant Garamond", serif; margin: 0; text-transform: uppercase; }
+.drawer-header button { background: none; border: 0; cursor: pointer; }
+.drawer-content { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; }
+.empty-message { text-align: center; color: #888; margin: auto; font-size: 13px; }
+
+.drawer-items { display: flex; flex-direction: column; gap: 25px; }
+.drawer-item { display: flex; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--cream); }
+.drawer-item:last-child { border-bottom: 0; }
+.item-img { flex-shrink: 0; width: 60px; height: 75px; position: relative; background: var(--cream); }
+.item-img img { object-fit: cover; }
+.item-details { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
+.item-details h4 { font: 500 16px "Cormorant Garamond", serif; margin: 0; text-transform: uppercase; }
+.item-details h4 a:hover { color: var(--purple-bright); }
+.item-price { font-size: 12px; color: var(--purple); font-weight: 500; margin: 0; }
+.item-qty { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.item-qty button { width: 24px; height: 24px; border: 1px solid var(--line); background: none; font-size: 14px; cursor: pointer; display: grid; place-items: center; }
+.item-qty span { font-size: 12px; font-weight: 600; min-width: 15px; text-align: center; }
+.item-actions { display: flex; gap: 15px; margin-top: 8px; font-size: 11px; }
+.item-actions button { background: none; border: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; color: var(--purple); padding: 0; }
+.text-remove { color: #a03a50 !important; font-size: 11px; font-weight: 500 !important; cursor: pointer; border: 0; background: none; padding: 0; }
+
+.drawer-footer { margin-top: auto; padding-top: 30px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; }
+.subtotal { display: flex; justify-content: space-between; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+.subtotal strong { font-size: 18px; color: var(--ink); }
+.checkout-btn { display:block; width: 100%; text-align: center; background: #0a090b; color: #fff; padding: 18px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; font-weight: 600; transition: background 0.3s; }
+.checkout-btn:hover { background: var(--purple-bright); }
+
+/* Product Actions styling */
+.product-actions-wrapper { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 380px; margin-top: 15px; }
+.action-buttons-row { display: flex; gap: 12px; width: 100%; }
+.add-to-cart-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; background: #0a090b; color: #fff; border: 0; padding: 18px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.12em; font-weight: 600; cursor: pointer; transition: background 0.3s; }
+.add-to-cart-btn:hover { background: var(--purple-bright); }
+.wishlist-btn { width: 56px; height: 56px; display: grid; place-items: center; border: 1px solid var(--line); background: none; cursor: pointer; transition: all 0.3s; color: var(--ink); }
+.wishlist-btn:hover { border-color: var(--purple-bright); color: var(--purple-bright); }
+.wishlist-btn.wishlist-btn.active { border-color: var(--purple-bright); color: var(--purple-bright); }
+.enquire-now-btn { display: block; width: 100%; text-align: center; border: 1px solid var(--line); color: var(--ink); padding: 17px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.12em; font-weight: 600; transition: all 0.3s; }
+.enquire-now-btn:hover { background: var(--cream); border-color: var(--ink); }
+

@@ -1,4 +1,6 @@
 
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="footer">
@@ -6,6 +8,12 @@ export default function Footer() {
         <section>
           <h3>House of Anazodo</h3>
           <p>Contemporary luxury couture, meticulously designed and handcrafted to celebrate individuality, confidence and exceptional artistry.</p>
+          <div className="footer-links" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', margin: '20px 0 25px 0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
+            <Link href="/about" style={{ opacity: 0.8 }}>The House</Link>
+            <Link href="/shop" style={{ opacity: 0.8 }}>Collections</Link>
+            <Link href="/pricing" style={{ opacity: 0.8 }}>Pricing</Link>
+            <Link href="/faq" style={{ opacity: 0.8 }}>FAQ</Link>
+          </div>
           <a href="https://instagram.com/houseofanazodo" aria-label="Instagram">◎</a>
         </section>
         <section className="footer-center">

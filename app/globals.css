@@ -208,8 +208,24 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
 .wide { grid-column:1/-1; }
 .choices { display:grid; grid-template-columns:repeat(3,1fr); align-items:start; }
 .choices legend { grid-column:1/-1; }
-.terms { display:flex; align-items:center; gap:8px; }
-.submit-button { justify-self:start; padding:18px 28px; }
+/* Pricing Page Styles */
+.pricing-content { padding: 90px 8%; max-width: 1200px; margin: 0 auto; }
+.pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-bottom: 60px; }
+.pricing-card { background: #fff; border: 1px solid var(--line); padding: 40px; display: flex; flex-direction: column; transition: all 0.3s ease; }
+.pricing-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); border-color: var(--purple-bright); }
+.pricing-card h3 { font: 500 28px "Cormorant Garamond", serif; margin: 0 0 15px; text-transform: uppercase; color: var(--ink); }
+.pricing-card .price-tag { font-size: 22px; font-weight: 600; color: var(--purple); margin-bottom: 25px; }
+.pricing-card p { color: #666; line-height: 1.7; margin-bottom: 20px; }
+.pricing-card .note { font-size: 12px; color: #888; background: var(--cream); padding: 12px 18px; border-left: 2px solid var(--purple-bright); margin-top: auto; }
+.pricing-additional { background: #0b090c; color: #fff; padding: 50px; margin-top: 60px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: center; }
+.pricing-additional h3 { font: 500 28px "Cormorant Garamond", serif; color: var(--purple-bright); margin-top: 0; margin-bottom: 15px; }
+.pricing-additional p { color: #bdb7bf; line-height: 1.7; font-size: 13px; margin: 0 0 15px 0; }
+.pricing-additional p:last-child { margin-bottom: 0; }
+.pricing-additional div { display: flex; flex-direction: column; }
+.pricing-additional .cta-container { display: flex; align-items: center; justify-content: center; }
+.pricing-additional .cta-container a { display: inline-block; background: #fff; color: #000; padding: 18px 35px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; font-weight: 600; transition: background 0.3s, color 0.3s; text-align: center; width: 100%; max-width: 280px; }
+.pricing-additional .cta-container a:hover { background: var(--purple-bright); color: #fff; }
+
 @media (max-width:900px) {
   .topbar { height: 32px; padding: 0 15px; display: flex; justify-content: center; align-items: center; }
   .topbar strong { display: block; font-size: 9px; font-weight: 500; }
@@ -348,23 +364,6 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
   .pricing-additional .cta-container a { max-width: 100%; }
 }
 
-/* Pricing Page Styles */
-.pricing-content { padding: 90px 8%; max-width: 1200px; margin: 0 auto; }
-.pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-bottom: 60px; }
-.pricing-card { background: #fff; border: 1px solid var(--line); padding: 40px; display: flex; flex-direction: column; transition: all 0.3s ease; }
-.pricing-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); border-color: var(--purple-bright); }
-.pricing-card h3 { font: 500 28px "Cormorant Garamond", serif; margin: 0 0 15px; text-transform: uppercase; color: var(--ink); }
-.pricing-card .price-tag { font-size: 22px; font-weight: 600; color: var(--purple); margin-bottom: 25px; }
-.pricing-card p { color: #666; line-height: 1.7; margin-bottom: 20px; }
-.pricing-card .note { font-size: 12px; color: #888; background: var(--cream); padding: 12px 18px; border-left: 2px solid var(--purple-bright); margin-top: auto; }
-.pricing-additional { background: #0b090c; color: #fff; padding: 50px; margin-top: 60px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: center; }
-.pricing-additional h3 { font: 500 28px "Cormorant Garamond", serif; color: var(--purple-bright); margin-top: 0; margin-bottom: 15px; }
-.pricing-additional p { color: #bdb7bf; line-height: 1.7; font-size: 13px; margin: 0 0 15px 0; }
-.pricing-additional p:last-child { margin-bottom: 0; }
-.pricing-additional div { display: flex; flex-direction: column; }
-.pricing-additional .cta-container { display: flex; align-items: center; justify-content: center; }
-.pricing-additional .cta-container a { display: inline-block; background: #fff; color: #000; padding: 18px 35px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; font-weight: 600; transition: background 0.3s, color 0.3s; text-align: center; width: 100%; max-width: 280px; }
-.pricing-additional .cta-container a:hover { background: var(--purple-bright); color: #fff; }
 
 /* Header Search & Drawers Styling */
 .header-actions { display: flex; align-items: center; gap: 20px; }

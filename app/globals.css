@@ -6,9 +6,9 @@ html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
 body { margin:0; color:var(--ink); background:#fff; font-family:Montserrat,Arial,sans-serif; font-size:14px; overflow-x: hidden; max-width: 100%; }
 a { color:inherit; text-decoration:none; }
 button,input,select,textarea { font:inherit; }
-.topbar { height:39px; background:#050505; color:#fff; display:grid; grid-template-columns:100px 120px 1fr 160px; align-items:center; padding:0 28px; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
-.topbar strong { justify-self:center; }
-.topbar .follow { display:flex; gap:12px; align-items:center; justify-self:end; }
+.topbar { height:39px; background:#050505; color:#fff; display:flex; justify-content:space-between; align-items:center; padding:0 28px; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+.topbar strong { font-weight: 500; }
+.topbar .follow { display:flex; gap:12px; align-items:center; }
 .header { height:171px; display:grid; grid-template-columns:140px 1fr 160px; align-items:center; padding:0 5.5%; border-bottom:1px solid var(--line); position:relative; background:#fff; z-index:20; }
 .brand { display:flex; flex-direction:column; align-items:center; width:max-content; }
 .brand-mark,.monogram { font:500 36px/1 "Cormorant Garamond",serif; letter-spacing:-.12em; }
@@ -195,11 +195,17 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
 .terms { display:flex; align-items:center; gap:8px; }
 .submit-button { justify-self:start; padding:18px 28px; }
 @media (max-width:900px) {
-  .topbar { grid-template-columns:1fr 1fr; padding:0 16px; }
-  .topbar strong,.topbar .follow { display:none; }
-  .header { height:95px; grid-template-columns:1fr auto; padding:0 20px; }
-  .desktop-nav,.header-actions { display:none; }
-  .menu-button { display:block; }
+  .topbar { height: 32px; padding: 0 15px; display: flex; justify-content: center; align-items: center; }
+  .topbar strong { display: block; font-size: 9px; font-weight: 500; }
+  .topbar .follow { display: none; }
+  .header { height: 85px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; }
+  .brand-mark { font-size: 26px; }
+  .brand small { font-size: 6px; letter-spacing: 0.18em; }
+  .desktop-nav { display: none; }
+  .header-actions { display: flex; align-items: center; gap: 16px; }
+  .header-actions a[aria-label="Admin Profile"] { display: none; }
+  .menu-button { display: block; margin-left: 4px; padding: 0; background: none; border: 0; color: inherit; cursor: pointer; display: flex; align-items: center; }
+  .menu-button svg { width: 20px; height: 20px; }
   .hero { min-height:620px; margin:0; }
   .hero > img { object-position:58% center; }
   .hero h1 { font-size:47px; line-height:.98; }
@@ -225,9 +231,72 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
   .mobile-nav-group { display:flex; flex-direction:column; }
   .mobile-drawer nav .mobile-sub-link { padding:10px 0 10px 18px; border-bottom:0; color:#777; font-size:10px; }
   .product-grid { grid-template-columns:1fr 1fr;padding:55px 18px;gap:35px 12px; }
-  .shop-toolbar { padding-left:18px; }.shop-controls button { padding:0 12px; }.shop-controls select { min-width:0; width:145px; padding:0 9px; }
-  .shop-layout { grid-template-columns:1fr; padding:28px 18px 80px; }.shop-sidebar { display:grid; grid-template-columns:1fr 1fr; gap:25px; }.shop-sidebar section { margin-bottom:0; }.shop-sidebar section:last-child { display:none; }
-  .shop-product-grid { gap:35px 12px; }.shop-product-grid.list-view .product-card { grid-template-columns:135px 1fr; column-gap:16px; }.shop-product-grid.list-view .product-card>div { min-height:190px; }
+  .shop-toolbar { flex-direction: column; align-items: stretch; height: auto; padding: 15px 18px; gap: 12px; }
+  .shop-toolbar>p { text-align: center; margin: 0; }
+  .shop-controls { justify-content: center; border: 1px solid var(--line); width: 100%; }
+  .shop-controls button { padding: 12px; border-left: 0; border-right: 1px solid var(--line); flex: 1; justify-content: center; }
+  .shop-controls select { min-width: 0; width: 100%; flex: 3; padding: 12px 14px; border: 0; }
+  .shop-layout { grid-template-columns: 1fr; padding: 28px 18px 80px; }
+  .mobile-filter-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    padding: 16px;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 25px;
+  }
+  .sidebar-header-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar-header-mobile h3 {
+    font: 500 24px "Cormorant Garamond", serif;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  .sidebar-header-mobile button {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+  }
+  .shop-sidebar {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    padding: 0 !important;
+    gap: 0;
+  }
+  .shop-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .shop-sidebar section {
+    padding: 25px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .shop-sidebar section:last-child { display: none; }
+  .shop-product-grid { gap: 35px 12px; }.shop-product-grid.list-view .product-card { grid-template-columns: 135px 1fr; column-gap: 16px; }.shop-product-grid.list-view .product-card>div { min-height: 190px; }
   .product-detail { grid-template-columns:1fr; padding:28px 18px 55px; }.product-gallery { grid-template-columns:1fr; }.product-thumbnails { order:2; flex-direction:row; max-width:100%; }.product-thumbnails button { width:70px; height:88px; }.product-detail-image { min-height:560px; }.product-summary { padding:55px 5px 20px; }
   .product-reviews,.related-products { padding-left:18px; padding-right:18px; }.related-products>div { gap:12px; }
   .faq-content { grid-template-columns:1fr;padding:70px 22px;gap:45px; }.faq-aside { position:static; }
@@ -314,4 +383,23 @@ fieldset label,.terms { color:#655f5b; font-size:12px; }
 .wishlist-btn.wishlist-btn.active { border-color: var(--purple-bright); color: var(--purple-bright); }
 .enquire-now-btn { display: block; width: 100%; text-align: center; border: 1px solid var(--line); color: var(--ink); padding: 17px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.12em; font-weight: 600; transition: all 0.3s; }
 .enquire-now-btn:hover { background: var(--cream); border-color: var(--ink); }
+
+/* Admin Modal & Tabs styling */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 999; display: grid; place-items: center; padding: 40px 20px; overflow-y: auto; }
+.modal-container { width: min(800px, 100%); background: #fff; position: relative; box-shadow: 0 30px 90px rgba(0,0,0,0.15); animation: zoom-in 0.3s ease-out; }
+@keyframes zoom-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.modal-close { position: absolute; top: 25px; right: 25px; background: none; border: 0; cursor: pointer; color: var(--ink); display: grid; place-items: center; z-index: 10; }
+.modal-close:hover { color: var(--purple-bright); }
+.admin-main section.category-manager { grid-template-columns: 1fr; gap: 30px; background: #fff; padding: 40px; border: 1px solid var(--line); }
+
+.footer-social-icon:hover {
+  background: #000;
+  border-color: #000;
+  color: #fff !important;
+  transform: translateY(-3px);
+}
+
+/* Shop mobile filter drawer styles */
+.mobile-filter-trigger { display: none; }
+.sidebar-header-mobile { display: none; }
 

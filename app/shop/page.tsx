@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import ProductCard from "@/components/ProductCard";
 import ShopControls from "@/components/ShopControls";
 import ShopPagination from "@/components/ShopPagination";
+import ShopFiltersDrawer from "@/components/ShopFiltersDrawer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { getShopProducts, SHOP_PAGE_SIZE } from "@/lib/products";
 
@@ -37,19 +38,15 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
       <ShopControls />
     </div>
     <div className="shop-layout">
-      <aside className="shop-sidebar">
-        <section><h2>Categories</h2><Link className={!category ? "active" : ""} href="/shop">All Products <span>({data.categories.reduce((sum, item) => sum + Number(item.value), 0)})</span></Link>
-          {data.categories.map((item) => <Link className={category === item.name ? "active" : ""} key={item.name} href={`/shop?category=${encodeURIComponent(item.name)}`}>{item.name} <span>({item.value})</span></Link>)}
-        </section>
-        <section><h2>Price</h2><form className="price-filter">
-          {category && <input type="hidden" name="category" value={category} />}
-          {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
-          {search && <input type="hidden" name="search" value={search} />}
-          <div><label>Minimum<input type="number" name="min" min="0" defaultValue={one(raw.min)} placeholder="₦0" /></label><label>Maximum<input type="number" name="max" min="0" defaultValue={one(raw.max)} placeholder="₦5,000,000" /></label></div>
-          <button type="submit">Filter</button>
-        </form></section>
-        <section><h2>House</h2><p>Every piece is designed and handcrafted by House of Anazodo.</p></section>
-      </aside>
+      <ShopFiltersDrawer
+        categories={data.categories}
+        totalProductCount={data.categories.reduce((sum, item) => sum + Number(item.value), 0)}
+        activeCategory={category}
+        minPrice={one(raw.min)}
+        maxPrice={one(raw.max)}
+        sort={sort}
+        search={search}
+      />
       <section className="shop-results">
         {data.items.length ? <div className={`shop-product-grid ${view === "list" ? "list-view" : ""}`}>{data.items.map((product) => <ProductCard product={product} key={product.id} />)}</div>
           : <div className="collection-empty"><h2>No pieces match these filters.</h2><p>Reset the filters to explore the complete collection.</p><Link href="/shop">View all products</Link></div>}
@@ -58,3 +55,4 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
     </div>
   </main><Footer /><WhatsAppButton /></>;
 }
+

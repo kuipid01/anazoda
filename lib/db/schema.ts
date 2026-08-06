@@ -35,3 +35,14 @@ export const productImages = pgTable("product_images", {
 export type Product = typeof products.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type ProductImage = typeof productImages.$inferSelect;
+
+export const socialLinks = pgTable("social_links", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  platform: text("platform").notNull().unique(),
+  url: text("url").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+});
+
+export type SocialLink = typeof socialLinks.$inferSelect;

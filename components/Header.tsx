@@ -55,8 +55,6 @@ export default function Header() {
   return (
     <>
       <div className="topbar">
-        <span>USD⌄</span>
-        <span>ENGLISH⌄</span>
         <strong>Designed to be remembered.</strong>
         <span className="follow">Follow us: <b aria-label="Instagram">◎</b></span>
       </div>

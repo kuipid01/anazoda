@@ -252,33 +252,36 @@ export default function ProductManager() {
       </div>}
       
       <aside className="admin-sidebar">
-        <div className="monogram">PA</div>
-        <strong>House of Anazodo</strong>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '35px' }}>
+        <div className="sidebar-header-row">
+          <div className="brand-group">
+            <div className="monogram">PA</div>
+            <strong>House of Anazodo</strong>
+          </div>
+          <form action="/api/admin/logout" method="post" className="logout-form">
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
+        <nav className="admin-nav">
           <button 
             onClick={() => setActiveTab("products")} 
             className={activeTab === "products" ? "active" : ""}
-            style={{ display: 'block', width: '100%', border: 0, background: activeTab === "products" ? '#ffffff12' : 'none', color: '#fff', padding: '12px 14px', textAlign: 'left', borderLeft: activeTab === "products" ? '2px solid var(--purple-bright)' : 'none', cursor: 'pointer', fontSize: '13px' }}
           >
             Products
           </button>
           <button 
             onClick={() => setActiveTab("categories")} 
             className={activeTab === "categories" ? "active" : ""}
-            style={{ display: 'block', width: '100%', border: 0, background: activeTab === "categories" ? '#ffffff12' : 'none', color: '#fff', padding: '12px 14px', textAlign: 'left', borderLeft: activeTab === "categories" ? '2px solid var(--purple-bright)' : 'none', cursor: 'pointer', fontSize: '13px' }}
           >
             Categories
           </button>
           <button 
             onClick={() => setActiveTab("social")} 
             className={activeTab === "social" ? "active" : ""}
-            style={{ display: 'block', width: '100%', border: 0, background: activeTab === "social" ? '#ffffff12' : 'none', color: '#fff', padding: '12px 14px', textAlign: 'left', borderLeft: activeTab === "social" ? '2px solid var(--purple-bright)' : 'none', cursor: 'pointer', fontSize: '13px' }}
           >
             Social Media
           </button>
-          <a href="/" target="_blank" style={{ display: 'block', color: '#aaa', padding: '12px 14px', fontSize: '13px' }}>View website ↗</a>
+          <a href="/" target="_blank">View website ↗</a>
         </nav>
-        <form action="/api/admin/logout" method="post" style={{ marginTop: 'auto' }}><button style={{ border: "1px solid #ffffff33", color: "#fff", background: "none", padding: "12px", width: "100%", cursor: "pointer" }}>Sign out</button></form>
       </aside>
 
       <main className="admin-main">
@@ -289,14 +292,14 @@ export default function ProductManager() {
                 <span>ATELIER CMS</span>
                 <h1>Product collection</h1>
               </div>
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <button onClick={handleSeedProducts} disabled={loading || saving} style={{ display: "flex", gap: "8px", background: "var(--purple)", color: "#fff", border: "0", padding: "15px 20px", fontSize: "11px", alignItems: "center", cursor: "pointer" }}>
+              <div className="admin-actions-row">
+                <button onClick={handleSeedProducts} disabled={loading || saving} className="btn-seed">
                   Seed Test Products
                 </button>
-                <button onClick={handleClearProducts} disabled={loading || saving} style={{ display: "flex", gap: "8px", background: "#a03a50", color: "#fff", border: "0", padding: "15px 20px", fontSize: "11px", alignItems: "center", cursor: "pointer" }}>
+                <button onClick={handleClearProducts} disabled={loading || saving} className="btn-clear">
                   Clear Collection
                 </button>
-                <button onClick={() => setShowAddModal(true)} style={{ display: "flex", gap: "8px", background: "#090909", color: "#fff", padding: "15px 20px", fontSize: "11px", alignItems: "center", border: 0, cursor: "pointer" }}>
+                <button onClick={() => setShowAddModal(true)} className="btn-add">
                   <Plus size={17} /> Add product
                 </button>
               </div>

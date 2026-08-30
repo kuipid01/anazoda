@@ -21,3 +21,12 @@ export async function uploadProductImage(file: File) {
   });
   return { imageUrl: result.secure_url, imagePublicId: result.public_id };
 }
+
+export async function deleteImage(publicId: string) {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) return;
+  try {
+    await getCloudinary().uploader.destroy(publicId);
+  } catch (error) {
+    console.error("Cloudinary delete error:", error);
+  }
+}

@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
 
 export const categories = pgTable("categories", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -52,8 +52,7 @@ export const looks = pgTable("looks", {
   title: text("title").notNull(),
   priceRange: text("price_range"),
   category: text("category").notNull().default("Couture"),
-  imageUrl: text("image_url").notNull(),
-  imagePublicId: text("image_public_id").notNull(),
+  images: jsonb("images").$type<Array<{url: string, publicId: string}>>().notNull().default([]),
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()

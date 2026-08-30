@@ -14,39 +14,44 @@ export async function POST(req: Request) {
   
   try {
     const form = await req.formData();
-    const image = form.get("image");
+    const imageFiles = form.getAll("images");
     
-    if (!image || !(image instanceof File) || image.size === 0) {
-      return NextResponse.json({ error: "Image is required" }, { status: 400 });
-    }
-    if (!image.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Must be a valid image" }, { status: 400 });
-    }
-    if (image.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "Image must be under 10MB" }, { status: 400 });
+    if (!imageFiles || imageFiles.length === 0) {
+      return NextResponse.json({ error: "At least one image is required" }, { status: 400 });
     }
 
-    const uploaded = await uploadProductImage(image);
+    const uploadedImages = [];
+    for (const file of imageFiles) {
+      if (file instanceof File && file.size > 0) {
+        if (!file.type.startsWith("image/")) {
+          return NextResponse.json({ error: "All files must be valid images" }, { status: 400 });
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          return NextResponse.json({ error: "Images must be under 10MB" }, { status: 400 });
+        }
+        const uploaded = await uploadProductImage(file);
+        uploadedImages.push({ url: uploaded.imageUrl, publicId: uploaded.imagePublicId });
+      }
+    }
+
+    if (uploadedImages.length === 0) {
+      return NextResponse.json({ error: "No valid images were uploaded" }, { status: 400 });
+    }
 
     const title = String(form.get("title") || "").trim();
     const priceRange = String(form.get("priceRange") || "").trim();
     const category = String(form.get("category") || "").trim();
-    const position = Number(form.get("position")) || 0;
+    const position = Number(form.get("position")) || 1;
 
-    if (!title) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
-    if (!category) {
-      return NextResponse.json({ error: "Category is required" }, { status: 400 });
-    }
+    if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    if (!category) return NextResponse.json({ error: "Category is required" }, { status: 400 });
 
     const look = await createLook({
       title,
       priceRange,
       category,
       position,
-      imageUrl: uploaded.imageUrl,
-      imagePublicId: uploaded.imagePublicId
+      images: uploadedImages
     });
 
     return NextResponse.json(look);

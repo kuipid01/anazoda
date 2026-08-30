@@ -24,7 +24,7 @@ export default async function LooksCarousel() {
             <FadeIn key={look.id} delay={i * 0.1} className="snap-start shrink-0 w-[80vw] md:w-[400px] lg:w-[450px]">
               <div className="relative aspect-[3/4] bg-white group overflow-hidden mb-6">
                 <Image
-                  src={look.imageUrl}
+                  src={look.images?.[0]?.url}
                   alt={look.title}
                   fill
                   className="object-cover transition-transform duration-1000 group-hover:scale-105"

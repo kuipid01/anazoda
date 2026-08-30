@@ -1,17 +1,11 @@
-"use client"
-import Image from "next/image";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ConsultationForm from "@/components/ConsultationForm";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { getProduct } from "@/lib/products";
+import { FadeIn, SlideUp } from "@/components/MotionWrappers";
 
 export const dynamic = "force-dynamic";
-
-// Brand palette, sourced from packaging (box: black + glitter amethyst-purple + white)
-// brand-ink:    #0B0A0D  (near-black, matches box)
-// brand-purple: #5B21A8  (deep amethyst — replaces generic Tailwind purple-700)
-// brand-purple-soft: #8B5CF6 (lighter accent for hovers / secondary text)
 
 export default async function ConsultationPage({ searchParams }: { searchParams: Promise<{ product?: string | string[] }> }) {
   const rawProduct = (await searchParams).product;
@@ -19,125 +13,132 @@ export default async function ConsultationPage({ searchParams }: { searchParams:
   const product = slug ? await getProduct(slug) : null;
   const selectedProduct = product ? {
     name: product.name,
-    price: new Intl.NumberFormat("en-NG", { style: "currency", currency: product.currency, maximumFractionDigits: 0 }).format(product.price / 100)
+    price: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(product.price / 100)
   } : null;
 
   return (
     <>
       <Header />
-      <main className="min-h-screen py-16 px-6 md:px-20 lg:px-32 max-w-6xl mx-auto bg-white">
-        <section className="mb-20 text-center">
-          <span className="text-[#5B21A8] font-semibold tracking-[0.25em] text-xs uppercase block mb-4">
-            Private Appointments
-          </span>
-          <h1 className="text-4xl md:text-6xl font-medium font-serif mb-6 text-[#0B0A0D]">
-            Consultation &amp; Services
-          </h1>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
-            Every bespoke commission begins with a private consultation.
-          </p>
+      <main className="bg-[#FDFBF7] min-h-screen pb-32">
+        {/* HERO SECTION */}
+        <section className="pt-24 pb-16 px-6 md:px-12 text-center bg-[#EAE6DF] border-b border-[#d7af78]/30">
+          <SlideUp className="max-w-3xl mx-auto">
+            <span className="uppercase tracking-[0.3em] text-[10px] text-[#5B21A8] mb-6 block font-semibold">
+              PRIVATE APPOINTMENTS
+            </span>
+            <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-light mb-8 text-[#0B0A0D] tracking-wide leading-tight">
+              Consultation <span className="italic text-[#5B21A8]">&</span> Services
+            </h1>
+            <p className="text-[#0B0A0D]/70 text-sm md:text-base leading-relaxed font-light max-w-2xl mx-auto">
+              Every bespoke commission begins with a private consultation.
+            </p>
+          </SlideUp>
         </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 mb-20">
-          {/* Standard Consultation */}
-          <div>
-            <h2 className="text-2xl font-serif mb-6 border-b-2 border-[#5B21A8]/20 pb-4 text-[#0B0A0D]">
-              Standard Consultation
-            </h2>
-            <div className="space-y-4 text-gray-700 leading-relaxed mb-6">
-              <p>
-                Each consultation lasts approximately 40 minutes and is tailored to
-                understanding your vision, event, style preferences, and garment
-                requirements.
-              </p>
-              <p>Consultations may be conducted via:</p>
-              <ul className="space-y-2 text-gray-600">
-                {["WhatsApp", "FaceTime", "WhatsApp Video", "Email", "In-person (by appointment)"].map((item) => (
-                  <li key={item} className="flex items-center gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#5B21A8]" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <p className="font-medium text-[#0B0A0D] mt-6 pt-4 border-t border-gray-100">
-                Consultation fees must be paid before your appointment is confirmed.
-                Please note that consultation fees are non-refundable and
-                non-transferable.
-              </p>
-            </div>
-            <button
-              onClick={() => window.location.href = "/consultation#consultation-form"}
-              className="inline-block bg-[#0B0A0D] text-white px-6 py-3 uppercase tracking-widest text-xs font-semibold border border-[#0B0A0D] hover:bg-[#8B5CF6] hover:border-[#8B5CF6] hover:text-white transition-colors"
-            >
-              Book Now
-            </button>
+        <section className="max-w-[1200px] mx-auto px-6 md:px-12 pt-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-16 mb-24">
+            
+            {/* Standard Consultation */}
+            <FadeIn>
+              <div className="bg-[#EAE6DF]/30 p-10 border border-[#d7af78]/30 h-full flex flex-col">
+                <h2 className="text-3xl font-serif mb-8 border-b border-[#d7af78]/30 pb-4 text-[#0B0A0D]">
+                  Standard Consultation
+                </h2>
+                <div className="space-y-6 text-[#0B0A0D]/70 leading-loose text-sm md:text-base font-light flex-1">
+                  <p>
+                    Each consultation lasts approximately 40 minutes and is tailored to
+                    understanding your vision, event, style preferences, and garment
+                    requirements.
+                  </p>
+                  <p>Consultations may be conducted via:</p>
+                  <ul className="space-y-3">
+                    {["WhatsApp", "FaceTime", "WhatsApp Video", "Email", "In-person (by appointment)"].map((item) => (
+                      <li key={item} className="flex items-center gap-4">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#d7af78] opacity-80" />
+                        <span className="text-[#0B0A0D]/80">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="font-medium text-[#0B0A0D] pt-6 mt-6 border-t border-[#d7af78]/30">
+                    Consultation fees must be paid before your appointment is confirmed.
+                    Please note that consultation fees are non-refundable and
+                    non-transferable.
+                  </p>
+                </div>
+              </div>
+            </FadeIn>
+
+            {/* Premium Services */}
+            <FadeIn delay={0.1}>
+              <div className="bg-[#0B0A0D] text-white p-10 h-full flex flex-col relative overflow-hidden border border-black">
+                {/* Decorative Element */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-[#5B21A8] opacity-20 blur-3xl pointer-events-none" />
+
+                <h2 className="text-3xl font-serif mb-8 border-b border-white/20 pb-4 relative">
+                  Premium Services
+                </h2>
+
+                <div className="space-y-12 flex-1 relative z-10">
+                  <div>
+                    <h3 className="text-xl font-serif mb-4 text-[#d7af78]">Home Consultation</h3>
+                    <p className="text-white/60 text-sm font-light mb-6 leading-loose">
+                      For clients who prefer consultations at their residence or preferred
+                      location:
+                    </p>
+                    <ul className="space-y-4 text-sm font-light">
+                      <li className="flex justify-between border-b border-white/10 pb-3">
+                        <span className="text-white/80">Within Lagos</span>
+                        <span className="font-medium text-[#d7af78]">$100 (₦100,000) / hr</span>
+                      </li>
+                      <li className="flex justify-between border-b border-white/10 pb-3">
+                        <span className="text-white/80">Outside Lagos</span>
+                        <span className="font-medium text-[#d7af78]">$1,000 (₦1,000,000) / day</span>
+                      </li>
+                      <li className="flex justify-between border-b border-white/10 pb-3">
+                        <span className="text-white/80">International</span>
+                        <span className="font-medium text-[#d7af78]">From $5,000 / day*</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-serif mb-4 text-[#d7af78]">Dressing Service</h3>
+                    <p className="text-white/60 text-sm font-light mb-6 leading-loose">
+                      Our professional dressing service ensures every detail of your look is
+                      flawlessly executed on the day of your event.
+                    </p>
+                    <ul className="space-y-4 text-sm font-light">
+                      <li className="flex justify-between border-b border-white/10 pb-3">
+                        <span className="text-white/80">Within Lagos</span>
+                        <span className="font-medium text-[#d7af78]">$100 (₦100,000) / hr</span>
+                      </li>
+                      <li className="flex justify-between border-b border-white/10 pb-3">
+                        <span className="text-white/80">Outside Lagos</span>
+                        <span className="font-medium text-[#d7af78]">$1,000 (₦1,000,000) / day</span>
+                      </li>
+                      <li className="flex justify-between border-b border-white/10 pb-3">
+                        <span className="text-white/80">International</span>
+                        <span className="font-medium text-[#d7af78]">From $5,000 / day*</span>
+                      </li>
+                    </ul>
+                    <p className="text-xs text-white/40 mt-6 italic">
+                      * International rates exclude travel and accommodation expenses.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+
           </div>
 
-          {/* Premium Services */}
-          <div className="bg-[#0B0A0D] text-white p-8 rounded-sm relative overflow-hidden">
-            {/* subtle purple glow, echoing the glitter edge on the box */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#5B21A8] opacity-30 blur-3xl pointer-events-none" />
-
-            <h2 className="text-2xl font-serif mb-6 border-b border-white/15 pb-4 relative">
-              Premium Services
-            </h2>
-
-            <div className="mb-8 relative">
-              <h3 className="text-lg font-medium mb-3">Home Consultation</h3>
-              <p className="text-white/60 text-sm mb-4">
-                For clients who prefer consultations at their residence or preferred
-                location:
-              </p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/80">Within Lagos</span>
-                  <span className="font-semibold text-[#C4A6F0]">$100 (₦100,000) per hour</span>
-                </li>
-                <li className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/80">Outside Lagos</span>
-                  <span className="font-semibold text-[#C4A6F0]">$1,000 (₦1,000,000) per day</span>
-                </li>
-                <li className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/80">International</span>
-                  <span className="font-semibold text-[#C4A6F0]">From $5,000 per day*</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="relative">
-              <h3 className="text-lg font-medium mb-3">Dressing Service</h3>
-              <p className="text-white/60 text-sm mb-4">
-                Our professional dressing service ensures every detail of your look is
-                flawlessly executed on the day of your event.
-              </p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/80">Within Lagos</span>
-                  <span className="font-semibold text-[#C4A6F0]">$100 (₦100,000) per hour</span>
-                </li>
-                <li className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/80">Outside Lagos</span>
-                  <span className="font-semibold text-[#C4A6F0]">$1,000 (₦1,000,000) per day</span>
-                </li>
-                <li className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/80">International</span>
-                  <span className="font-semibold text-[#C4A6F0]">From $5,000 per day*</span>
-                </li>
-              </ul>
-              <p className="text-xs text-white/40 mt-4 italic">
-                * International rates exclude travel and accommodation expenses.
-              </p>
-            </div>
+          <div id="consultation-form" className="scroll-mt-20">
+            <FadeIn delay={0.2}>
+              <div className="max-w-3xl mx-auto">
+                <ConsultationForm selectedProduct={selectedProduct} />
+              </div>
+            </FadeIn>
           </div>
-        </div>
-
-        <div id="consultation-form" className="scroll-mt-20">
-          {/*
-            DEV NOTE (not shown to clients): ConsultationForm is flagged for
-            future functional integration with a booking system.
-          */}
-          <ConsultationForm selectedProduct={selectedProduct} />
-        </div>
+        </section>
       </main>
       <Footer />
       <WhatsAppButton />

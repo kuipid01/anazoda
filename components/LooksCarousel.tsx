@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { getLooks } from "@/lib/looks";
-import { FadeIn, SlideUp } from "@/components/MotionWrappers";
+import { SlideUp } from "@/components/MotionWrappers";
+import LooksClient from "./LooksClient";
 
 export default async function LooksCarousel() {
   const looks = await getLooks();
@@ -19,30 +19,8 @@ export default async function LooksCarousel() {
           </h2>
         </SlideUp>
         
-        <div className="flex overflow-x-auto gap-6 md:gap-10 pb-12 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {looks.map((look, i) => (
-            <FadeIn key={look.id} delay={i * 0.1} className="snap-start shrink-0 w-[80vw] md:w-[400px] lg:w-[450px]">
-              <div className="relative aspect-[3/4] bg-white group overflow-hidden mb-6">
-                <Image
-                  src={look.images?.[0]?.url}
-                  alt={look.title}
-                  fill
-                  className="object-cover transition-transform duration-1000 group-hover:scale-105"
-                  sizes="(max-width: 768px) 80vw, 450px"
-                />
-              </div>
-              <span className="uppercase tracking-[0.2em] text-[10px] text-[#5B21A8] mb-2 block font-medium">
-                {look.category}
-              </span>
-              <h3 className="font-serif text-xl md:text-2xl text-[#0B0A0D] mb-2">{look.title}</h3>
-              {look.priceRange && (
-                <p className="text-gray-500 text-sm uppercase tracking-widest">
-                  {look.priceRange}
-                </p>
-              )}
-            </FadeIn>
-          ))}
-        </div>
+        <LooksClient looks={looks} />
+        
         <style dangerouslySetInnerHTML={{__html: `
           .hide-scrollbar::-webkit-scrollbar {
             display: none;

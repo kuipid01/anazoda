@@ -69,8 +69,7 @@ export default function Header() {
 
   return (
     <nav className="z-10 relative">
-      {/* ANNOUNCEMENT BAR */}
-      <div className="bg-[#0B0A0D] z-10 relative text-white text-[11px] tracking-[0.2em] uppercase px-4 md:px-8 py-2.5 flex items-center justify-between">
+      <div className="bg-[#0B0A0D] z-10 relative text-white! text-[11px] tracking-[0.2em] uppercase px-4 md:px-8 py-2.5 flex items-center justify-between">
         <span className="mx-auto md:mx-0 font-medium">Designed to be remembered.</span>
         <span className="hidden md:flex items-center gap-2 text-white/70">
           Follow us: <b aria-label="Instagram" className="not-italic">◎</b>
@@ -78,60 +77,62 @@ export default function Header() {
       </div>
 
       {/* MAIN HEADER — 3-column: nav left / logo centered / search + icons right */}
-      <header className="relative bg-none border-b border-black/5">
-        <div className="grid grid-cols-[1fr_auto_1fr]  items-center px-4 md:px-8 py-5 max-w-[1600px] mx-auto">
+      <header className="relative bg-black/25 backdrop-blur-md border-b border-white/10">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 md:px-8 py-5 max-w-[1600px] mx-auto">
           {/* LEFT — desktop nav */}
-          <div><nav className="hidden lg:flex items-center gap-8">
-            {links.filter((l) => l.label !== "Home").map((link) => (
-              <div className="relative group" key={link.label}>
-                <Link
-                  href={link.href}
-                  className="flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] text-[#0B0A0D] hover:text-[#5B21A8] transition-colors"
-                >
-                  {link.label}
-                  {link.children && <span className="text-[9px] mt-[1px]">⌄</span>}
-                </Link>
-                {link.children && (
-                  <div className="absolute left-0 top-full pt-4 hidden group-hover:block z-30">
-                    <div className="bg-white border border-black/5 shadow-lg min-w-[190px] py-2">
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.label}
-                          href={child.href}
-                          className="block px-5 py-2.5 text-[11px] uppercase tracking-[0.14em] text-[#0B0A0D]/80 hover:text-[#5B21A8] hover:bg-[#FDFBF7]"
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
+          <div>
+            <nav className="hidden lg:flex items-center gap-8">
+              {links.filter((l) => l.label !== "Home").map((link) => (
+                <div className="relative group" key={link.label}>
+                  <Link
+                    href={link.href}
+                    className="flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] text-white! hover:text-[#8B5CF6] transition-colors"
+                  >
+                    {link.label}
+                    {link.children && <span className="text-[9px] mt-[1px]">⌄</span>}
+                  </Link>
+                  {link.children && (
+                    <div className="absolute left-0 top-full pt-4 hidden group-hover:block z-30">
+                      <div className="bg-white border border-black/5 shadow-lg min-w-[190px] py-2">
+                        {link.children.map((child) => (
+                          <Link
+                            key={child.label}
+                            href={child.href}
+                            className="block px-5 py-2.5 text-[11px] uppercase tracking-[0.14em] text-[#0B0A0D]/80 hover:text-[#5B21A8] hover:bg-[#FDFBF7]"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav></div>
+                  )}
+                </div>
+              ))}
+            </nav>
+          </div>
 
           {/* CENTER — logo */}
-          <Link href="/" aria-label="House of Anazodo home" className="flex  flex-col items-center justify-self-center">
-            <span className="font-serif italic text-2xl text-[#0B0A0D] leading-none">PA</span>
-            <small className="text-[9px] tracking-[0.3em] uppercase text-[#0B0A0D]/70 mt-1">House of Anazodo</small>
+          <Link href="/" aria-label="House of Anazodo home" className="flex flex-col items-center justify-self-center">
+            <span className="font-serif italic text-2xl text-white leading-none">PA</span>
+            <small className="text-[9px] tracking-[0.3em] uppercase text-white mt-1">House of Anazodo</small>
           </Link>
 
           {/* RIGHT — inline search + icons (desktop) */}
           <div className="hidden lg:flex items-center justify-end gap-6">
-            <form onSubmit={submitSearch} className="flex items-center border-b border-[#0B0A0D]/30 focus-within:border-[#5B21A8] transition-colors">
+            <form onSubmit={submitSearch} className="flex items-center border-b border-white/30 focus-within:border-[#8B5CF6] transition-colors">
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-32 xl:w-44 bg-transparent outline-none text-[13px] tracking-wide placeholder:text-[#0B0A0D]/45 py-1"
+                className="w-32 xl:w-44 bg-transparent outline-none text-[13px] tracking-wide text-white placeholder:text-white/50 py-1"
               />
-              <button type="submit" aria-label="Search" className="text-[#0B0A0D]/60 hover:text-[#5B21A8] transition-colors pl-2">
+              <button type="submit" aria-label="Search" className="text-white/70 hover:text-[#8B5CF6] transition-colors pl-2">
                 <Search size={16} />
               </button>
             </form>
 
-            <button onClick={() => setWishlistOpen(true)} aria-label="Wishlist" className="relative text-[#0B0A0D] hover:text-[#5B21A8] transition-colors">
+            <button onClick={() => setWishlistOpen(true)} aria-label="Wishlist" className="relative text-white! hover:text-[#8B5CF6] transition-colors">
               <Heart size={19} />
               {wishlist.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-[#5B21A8] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
@@ -139,10 +140,10 @@ export default function Header() {
                 </span>
               )}
             </button>
-            <Link href="/admin" aria-label="Admin Profile" className="text-[#0B0A0D] hover:text-[#5B21A8] transition-colors">
+            <Link href="/admin" aria-label="Admin Profile" className="text-white! hover:text-[#8B5CF6] transition-colors">
               <UserRound size={19} />
             </Link>
-            <button onClick={() => setCartOpen(true)} aria-label="Cart" className="relative text-[#0B0A0D] hover:text-[#5B21A8] transition-colors">
+            <button onClick={() => setCartOpen(true)} aria-label="Cart" className="relative text-white hover:text-[#8B5CF6] transition-colors">
               <ShoppingBag size={19} />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-[#5B21A8] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
@@ -154,10 +155,10 @@ export default function Header() {
 
           {/* MOBILE — search toggle + hamburger */}
           <div className="lg:hidden flex items-center gap-4 justify-self-end">
-            <button onClick={() => setMobileSearchOpen(!mobileSearchOpen)} aria-label="Search" className="text-[#0B0A0D]">
+            <button onClick={() => setMobileSearchOpen(!mobileSearchOpen)} aria-label="Search" className="text-white">
               <Search size={20} />
             </button>
-            <button aria-label="Open menu" onClick={() => setOpen(true)} className="text-[#0B0A0D]">
+            <button aria-label="Open menu" onClick={() => setOpen(true)} className="text-white">
               <Menu size={22} />
             </button>
           </div>
@@ -200,11 +201,11 @@ export default function Header() {
             <div className="font-serif italic text-3xl text-[#0B0A0D] mt-6 mb-10">PA</div>
             <nav className="w-full max-w-xs flex flex-col items-center gap-6">
               {links.map((link, i) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.1 }}
-                  className="flex flex-col items-center gap-3" 
+                  className="flex flex-col items-center gap-3"
                   key={link.label}
                 >
                   <Link

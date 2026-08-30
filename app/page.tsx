@@ -9,6 +9,7 @@ import { getFeaturedProducts } from "@/lib/products";
 import { ArrowRight } from "lucide-react";
 import { FadeIn, SlideUp, ParallaxImage } from "@/components/MotionWrappers";
 import ExperienceGallery from "@/components/ExperienceGallery";
+import LooksCarousel from "@/components/LooksCarousel";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +28,11 @@ export default async function Home() {
             so it overlays transparently on the photo. */}
         <section className="relative w-full h-[100svh] overflow-hidden">
           <Image
-            src="/images/landing-1.JPG"
+            src="/images/landing.jpeg"
             alt="House of Anazodo couture"
             fill
             priority
-            className="object-cover object-[center_50%]"
+            className="object-cover object-[center_10%]"
             sizes="100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
@@ -169,7 +170,10 @@ export default async function Home() {
             </div>
           </FadeIn>
         </section>
-        {/* EXPERIENCE GALLERY (LIGHTBOX) */}
+        { /* LOOKS TO EXPERIENCES */ }
+        <LooksCarousel />
+
+        { /* EXPERIENCE GALLERY (LIGHTBOX) */ }
         <ExperienceGallery />
 
         {/* MANTRA STRIP */}

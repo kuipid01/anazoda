@@ -1,25 +1,66 @@
 const fs = require('fs');
-let code = fs.readFileSync('app/page.tsx', 'utf8');
 
-const socialGridRegex = /<div className="max-w-\[1400px\] mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">[\s\S]*?<\/div>/;
+let content = fs.readFileSync('components/ProductManager.tsx', 'utf8');
 
-const newSocialGrid = `<div className="max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((num, i) => (
-              <FadeIn
-                key={num}
-                delay={i * 0.1}
-                className="relative aspect-square bg-[#EAE6DF] flex items-center justify-center overflow-hidden group"
-              >
-                <Image 
-                  src={\`/images/featured/featured-\${num}.jpg\`} 
-                  alt={\`Anazodo featured \${num}\`} 
-                  fill 
-                  className="object-cover transition-transform duration-700 group-hover:scale-105" 
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                />
-              </FadeIn>
-            ))}
-          </div>`;
+// Insert saveLook and removeLook after removeCategory
+const insertionPoint = content.indexOf('async function removeCategory(id: string) {');
 
-code = code.replace(socialGridRegex, newSocialGrid);
-fs.writeFileSync('app/page.tsx', code);
+const insertFunctions = `
+  async function saveLook(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(""); 
+    if (!lookImages.length) return setToast({ type: "error", message: "Image is required" });
+    setLookSaving(true);
+    const form = event.currentTarget;
+    const title = String(new FormData(form).get("title") || "");
+    const priceRange = String(new FormData(form).get("priceRange") || "");
+    const position = Number(new FormData(form).get("position") || 1);
+    const file = lookImages[0].file;
+
+    const payload = new FormData();
+    payload.append("title", title);
+    payload.append("priceRange", priceRange);
+    payload.append("position", String(position));
+    payload.append("image", file);
+
+    try {
+      const response = await fetch("/api/admin/looks", { method: "POST", body: payload });
+      const data = await response.json();
+      if (response.ok) {
+        setLooks((items) => [...items, data].sort((a, b) => a.position - b.position));
+        URL.revokeObjectURL(lookImages[0].preview);
+        setLookImages([]);
+        form.reset();
+        setToast({ type: "success", message: \`"\${title}" look was saved.\` });
+      } else {
+        setToast({ type: "error", message: data.error });
+      }
+    } catch (error) {
+      setToast({ type: "error", message: "Failed to save look" });
+    } finally {
+      setLookSaving(false);
+    }
+  }
+
+  async function removeLook(id: string) {
+    if (!window.confirm("Delete this look and its image?")) return;
+    setDeletingLook(id);
+    try {
+      const response = await fetch(\`/api/admin/looks/\${id}\`, { method: "DELETE" });
+      if (response.ok) {
+        setLooks((items) => items.filter((item) => item.id !== id));
+        setToast({ type: "success", message: "Look deleted" });
+      } else {
+        setToast({ type: "error", message: (await response.json()).error });
+      }
+    } catch (e) {
+      setToast({ type: "error", message: "Failed to delete look" });
+    } finally {
+      setDeletingLook(null);
+    }
+  }
+
+`;
+
+content = content.slice(0, insertionPoint) + insertFunctions + content.slice(insertionPoint);
+
+fs.writeFileSync('components/ProductManager.tsx', content);

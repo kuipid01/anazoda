@@ -46,3 +46,17 @@ export const socialLinks = pgTable("social_links", {
 });
 
 export type SocialLink = typeof socialLinks.$inferSelect;
+
+export const looks = pgTable("looks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  priceRange: text("price_range"),
+  category: text("category").notNull().default("Couture"),
+  imageUrl: text("image_url").notNull(),
+  imagePublicId: text("image_public_id").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+});
+
+export type Look = typeof looks.$inferSelect;

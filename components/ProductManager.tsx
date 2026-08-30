@@ -2,17 +2,27 @@
 
 import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { CheckCircle2, ImagePlus, LoaderCircle, Plus, Trash2, XCircle, X } from "lucide-react";
-import type { Category, Product } from "@/lib/db/schema";
+import { CheckCircle2, ImagePlus, LoaderCircle, Plus, Trash2, XCircle, X, Info } from "lucide-react";
+import type { Category, Product, Look } from "@/lib/db/schema";
 
 export default function ProductManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [socials, setSocials] = useState<any[]>([]);
+  const [looks, setLooks] = useState<Look[]>([]);
   
-  const [activeTab, setActiveTab] = useState<"products" | "categories" | "social">("products");
+  const [lookSaving, setLookSaving] = useState(false);
+  const [deletingLook, setDeletingLook] = useState<string | null>(null);
+  const [lookImages, setLookImages] = useState<Array<{ file: File; preview: string }>>([]);
+  const [lookCategory, setLookCategory] = useState("");
+  const [lookPosition, setLookPosition] = useState<number | "">("");
+
+  const [newProductCategory, setNewProductCategory] = useState("");
+
+  const [activeTab, setActiveTab] = useState<"products" | "categories" | "social" | "looks">("products");
   const [showAddModal, setShowAddModal] = useState(false);
-  
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [categorySaving, setCategorySaving] = useState(false);
@@ -32,19 +42,22 @@ export default function ProductManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [productResponse, categoryResponse, socialResponse] = await Promise.all([
+    const [productResponse, categoryResponse, socialResponse, looksResponse] = await Promise.all([
       fetch("/api/admin/products"),
       fetch("/api/admin/categories"),
-      fetch("/api/admin/social")
+      fetch("/api/admin/social"),
+      fetch("/api/admin/looks")
     ]);
-    const [productData, categoryData, socialData] = await Promise.all([
+    const [productData, categoryData, socialData, looksData] = await Promise.all([
       productResponse.json(),
       categoryResponse.json(),
-      socialResponse.json()
+      socialResponse.json(),
+      looksResponse.json()
     ]);
     if (productResponse.ok) setProducts(productData); else setError(productData.error);
     if (categoryResponse.ok) setCategories(categoryData); else setError(categoryData.error);
     if (socialResponse.ok) setSocials(socialData); else setError(socialData.error);
+    if (looksResponse.ok) setLooks(looksData); else setError(looksData.error);
     setLoading(false);
   }, []);
 
@@ -56,10 +69,15 @@ export default function ProductManager() {
       setToast({ type: "error", message: "Add at least one product image before publishing." });
       return;
     }
+    if (!newProductCategory) {
+      setToast({ type: "error", message: "Select or create a category for this product." });
+      return;
+    }
     setSaving(true);
     const form = event.currentTarget;
     const payload = new FormData(form);
     payload.delete("images");
+    payload.set("category", newProductCategory);
     selectedImages.forEach(({ file }) => payload.append("images", file));
     try {
       const response = await fetch("/api/admin/products", { method: "POST", body: payload });
@@ -69,6 +87,7 @@ export default function ProductManager() {
         setSelectedImages([]);
         setImageInputKey((value) => value + 1);
         form.reset();
+        setNewProductCategory("");
         await load();
         setShowAddModal(false);
         setToast({ type: "success", message: `“${data.name}” was uploaded to Cloudinary and published.` });
@@ -119,6 +138,11 @@ export default function ProductManager() {
         setCategories((items) => [...items, data].sort((a, b) => a.name.localeCompare(b.name)));
         form.reset();
         setToast({ type: "success", message: `“${data.name}” was added and is ready to use.` });
+        if (showCategoryModal) {
+          setShowCategoryModal(false);
+          if (activeTab === "looks") setLookCategory(data.name);
+          else setNewProductCategory(data.name);
+        }
       } else {
         setToast({ type: "error", message: data.error || "The category could not be added." });
       }
@@ -126,6 +150,64 @@ export default function ProductManager() {
       setToast({ type: "error", message: "Could not reach the server. Please try again." });
     } finally {
       setCategorySaving(false);
+    }
+  }
+
+  async function saveLook(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError("");
+    if (!lookImages.length) return setToast({ type: "error", message: "A featured image is required." });
+    if (!lookCategory) return setToast({ type: "error", message: "Select or create a category for this look." });
+    if (lookPosition === "") return setToast({ type: "error", message: "Display order is required." });
+    
+    setLookSaving(true);
+    const form = event.currentTarget;
+    const title = String(new FormData(form).get("title") || "");
+    const priceRange = String(new FormData(form).get("priceRange") || "");
+    const file = lookImages[0].file;
+
+    const payload = new FormData();
+    payload.append("title", title);
+    payload.append("category", lookCategory);
+    payload.append("priceRange", priceRange);
+    payload.append("position", String(lookPosition));
+    payload.append("image", file);
+
+    try {
+      const response = await fetch("/api/admin/looks", { method: "POST", body: payload });
+      const data = await response.json();
+      if (response.ok) {
+        setLooks((items) => [...items, data].sort((a, b) => a.position - b.position));
+        URL.revokeObjectURL(lookImages[0].preview);
+        setLookImages([]);
+        setLookCategory("");
+        setLookPosition("");
+        form.reset();
+        setToast({ type: "success", message: `"${title}" look was saved.` });
+      } else {
+        setToast({ type: "error", message: data.error });
+      }
+    } catch (error) {
+      setToast({ type: "error", message: "Failed to save look" });
+    } finally {
+      setLookSaving(false);
+    }
+  }
+
+  async function removeLook(id: string) {
+    if (!window.confirm("Delete this look and its image?")) return;
+    setDeletingLook(id);
+    try {
+      const response = await fetch(`/api/admin/looks/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        setLooks((items) => items.filter((item) => item.id !== id));
+        setToast({ type: "success", message: "Look deleted" });
+      } else {
+        setToast({ type: "error", message: (await response.json()).error });
+      }
+    } catch (e) {
+      setToast({ type: "error", message: "Failed to delete look" });
+    } finally {
+      setDeletingLook(null);
     }
   }
 
@@ -250,7 +332,7 @@ export default function ProductManager() {
         <span>{toast.message}</span>
         <button onClick={() => setToast(null)} aria-label="Dismiss notification">×</button>
       </div>}
-      
+
       <aside className="admin-sidebar">
         <div className="sidebar-header-row">
           <div className="brand-group">
@@ -262,24 +344,10 @@ export default function ProductManager() {
           </form>
         </div>
         <nav className="admin-nav">
-          <button 
-            onClick={() => setActiveTab("products")} 
-            className={activeTab === "products" ? "active" : ""}
-          >
-            Products
-          </button>
-          <button 
-            onClick={() => setActiveTab("categories")} 
-            className={activeTab === "categories" ? "active" : ""}
-          >
-            Categories
-          </button>
-          <button 
-            onClick={() => setActiveTab("social")} 
-            className={activeTab === "social" ? "active" : ""}
-          >
-            Social Media
-          </button>
+          <button onClick={() => setActiveTab("products")} className={activeTab === "products" ? "active" : ""}>Products</button>
+          <button onClick={() => setActiveTab("categories")} className={activeTab === "categories" ? "active" : ""}>Categories</button>
+          <button onClick={() => setActiveTab("social")} className={activeTab === "social" ? "active" : ""}>Social Media</button>
+          <button onClick={() => setActiveTab("looks")} className={activeTab === "looks" ? "active" : ""}>Looks & Experiences</button>
           <a href="/" target="_blank">View website ↗</a>
         </nav>
       </aside>
@@ -293,20 +361,14 @@ export default function ProductManager() {
                 <h1>Product collection</h1>
               </div>
               <div className="admin-actions-row">
-                <button onClick={handleSeedProducts} disabled={loading || saving} className="btn-seed">
-                  Seed Test Products
-                </button>
-                <button onClick={handleClearProducts} disabled={loading || saving} className="btn-clear">
-                  Clear Collection
-                </button>
-                <button onClick={() => setShowAddModal(true)} className="btn-add">
-                  <Plus size={17} /> Add product
-                </button>
+                <button onClick={handleSeedProducts} disabled={loading || saving} className="btn-seed">Seed Test Products</button>
+                <button onClick={handleClearProducts} disabled={loading || saving} className="btn-clear">Clear Collection</button>
+                <button onClick={() => setShowAddModal(true)} className="btn-add"><Plus size={17} /> Add product</button>
               </div>
             </div>
-            
+
             {error && <div className="admin-error">{error}</div>}
-            
+
             <section className="product-admin-grid">
               {loading ? <div className="admin-empty"><LoaderCircle className="spin" /> Loading products…</div> :
                 products.length ? products.map((product) => (
@@ -325,11 +387,11 @@ export default function ProductManager() {
             <div>
               <span>CATALOGUE ORGANISATION</span>
               <h2>Categories</h2>
-              <p>Create reusable categories, then assign them when adding products.</p>
+              <p>Create reusable categories, then assign them when adding products or looks.</p>
             </div>
             <div>
-              <form onSubmit={addCategory}>
-                <input name="name" required disabled={categorySaving} placeholder="e.g. Bridal Couture" />
+              <form onSubmit={addCategory} style={{ display: "flex", gap: 10 }}>
+                <input name="name" required disabled={categorySaving} placeholder="e.g. Bridal Couture" style={{ flex: 1 }} />
                 <button type="submit" disabled={categorySaving}>
                   {categorySaving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
                   {categorySaving ? "Adding…" : "Add category"}
@@ -388,6 +450,144 @@ export default function ProductManager() {
             </div>
           </section>
         )}
+
+        {activeTab === "looks" && (
+          <section className="category-manager" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
+            <div>
+              <span>EXPERIENCES</span>
+              <h2>Looks to Experiences</h2>
+              <p>Create visual looks with an optional price range. These will be displayed in a horizontally scrolling section.</p>
+            </div>
+            <div>
+              <form
+                onSubmit={saveLook}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '18px',
+                  background: '#fbfbfb',
+                  padding: '24px',
+                  border: '1px solid #e6e6e6'
+                }}
+              >
+                <div>
+                  <label style={{ display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#8a8a8a', marginBottom: 6 }}>
+                    Category
+                  </label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <select
+                      name="category"
+                      value={lookCategory}
+                      onChange={(e) => setLookCategory(e.target.value)}
+                      required
+                      style={{ flex: 1, padding: '13px', border: '1px solid #ddd', background: '#fff' }}
+                    >
+                      <option value="">{categories.length ? "Select Category" : "Add a category first"}</option>
+                      {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryModal(true)}
+                      style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0A0D', color: '#fff', border: 0, cursor: 'pointer' }}
+                      aria-label="Add new category"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <input name="title" required placeholder="Look Title (e.g. Traditional Bridal)" style={{ flex: '1 1 220px', padding: '13px', border: '1px solid #ddd' }} />
+                  <input name="priceRange" placeholder="Price Range (e.g. $1000 - $3000)" style={{ flex: '1 1 200px', padding: '13px', border: '1px solid #ddd' }} />
+                </div>
+
+                <label className="admin-upload" style={{ width: '100%' }}>
+                  <ImagePlus /><span>{lookImages.length ? "Change Image" : "Choose Featured Image"}</span>
+                  <input type="file" accept="image/*" disabled={lookSaving} onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      if (lookImages.length) URL.revokeObjectURL(lookImages[0].preview);
+                      setLookImages([{ file, preview: URL.createObjectURL(file) }]);
+                    }
+                  }} />
+                </label>
+                
+                {lookImages.length > 0 && (
+                  <div className="admin-image-previews" style={{ marginTop: 0, display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <img src={lookImages[0].preview} alt="Look preview" style={{ height: '120px', width: 'auto', objectFit: 'cover', display: 'block', border: '1px solid #ddd' }} />
+                      <button
+                        type="button"
+                        onClick={() => { URL.revokeObjectURL(lookImages[0].preview); setLookImages([]); }}
+                        aria-label="Remove selected image"
+                        style={{
+                          position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: '50%',
+                          background: '#0B0A0D', color: '#fff', border: 0, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                    
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', background: '#fff', padding: '15px', border: '1px solid #eaeaea' }}>
+                      <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#5B21A8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Display Order <Info size={12} />
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <input 
+                          name="position" 
+                          type="number" 
+                          min="1" 
+                          required 
+                          value={lookPosition}
+                          onChange={(e) => setLookPosition(e.target.value ? Number(e.target.value) : "")}
+                          placeholder="e.g. 1" 
+                          style={{ width: '80px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }} 
+                        />
+                        <span style={{ fontSize: 12, color: '#777', lineHeight: 1.4 }}>
+                          Determines the sequence of images in the horizontally scrolling carousel on the homepage. Position 1 shows first (leftmost).
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={lookSaving || !lookImages.length || !lookCategory || lookPosition === ""}
+                  style={{
+                    padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                    border: 0, background: (lookSaving || !lookImages.length || !lookCategory || lookPosition === "") ? '#c9c9c9' : '#090909',
+                    color: '#fff', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em',
+                    cursor: (lookSaving || !lookImages.length || !lookCategory || lookPosition === "") ? 'not-allowed' : 'pointer',
+                    transition: 'background 0.15s ease'
+                  }}
+                >
+                  {lookSaving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
+                  {lookSaving ? "Uploading to Cloudinary…" : "Add Look"}
+                </button>
+              </form>
+
+              <div className="product-grid" style={{ marginTop: '30px' }}>
+                {looks.length ? looks.map((look) => (
+                  <article key={look.id} className="product-card">
+                    <img src={look.imageUrl} alt={look.title} loading="lazy" />
+                    <div>
+                      <small>{look.category} · Position {look.position}</small>
+                      <h3>{look.title}</h3>
+                      {look.priceRange && <p>{look.priceRange}</p>}
+                    </div>
+                    <button disabled={deletingLook === look.id} onClick={() => removeLook(look.id)} aria-label={"Delete look"}>
+                      {deletingLook === look.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                    </button>
+                  </article>
+                )) : <div className="admin-empty"><ImagePlus /> No looks added yet.</div>}
+              </div>
+            </div>
+          </section>
+        )}
+
       </main>
 
       {/* Add Product Modal */}
@@ -407,7 +607,29 @@ export default function ProductManager() {
                 <label>Product name<input name="name" required placeholder="The Amara Gown" /></label>
                 <label>Price<input name="price" type="number" min="0" step="0.01" required placeholder="1500000" /></label>
                 <label>Currency<select name="currency"><option value="NGN">NGN — ₦</option><option value="USD">USD — $</option><option value="GBP">GBP — £</option></select></label>
-                <label>Category<select name="category" required disabled={!categories.length}><option value="">{categories.length ? "Select category" : "Add a category first"}</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}</select></label>
+                <label>
+                  Category
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: 6 }}>
+                    <select
+                      name="category"
+                      value={newProductCategory}
+                      onChange={(e) => setNewProductCategory(e.target.value)}
+                      required
+                      style={{ flex: 1, padding: '13px', border: '1px solid #ddd', background: '#fff' }}
+                    >
+                      <option value="">{categories.length ? "Select category" : "Add a category first"}</option>
+                      {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryModal(true)}
+                      style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0A0D', color: '#fff', border: 0, cursor: 'pointer' }}
+                      aria-label="Add new category"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </label>
                 <label className="admin-wide">Description<textarea name="description" rows={5} placeholder="Silhouette, materials, handwork and inspiration…" /></label>
                 <label className="admin-upload admin-wide"><ImagePlus /><span>{selectedImages.length ? "Add more product images" : "Choose product images"}</span><small>Select up to 8 JPG, PNG or WebP images · maximum 10MB each. The first image becomes the shop cover.</small><input key={imageInputKey} type="file" accept="image/*" multiple disabled={saving || selectedImages.length >= 8} onChange={(event) => addImages(event.target.files)} /></label>
                 {selectedImages.length > 0 && <div className="admin-image-previews admin-wide">
@@ -419,7 +641,30 @@ export default function ProductManager() {
                 </div>}
                 <label className="admin-check"><input name="featured" type="checkbox" value="true" /> Feature on homepage</label>
                 <label className="admin-check"><input name="published" type="checkbox" value="true" defaultChecked /> Published</label>
-                <button className="admin-submit" disabled={saving || !categories.length || !selectedImages.length}>{saving && <LoaderCircle className="spin" size={15} />}{saving ? `Uploading ${selectedImages.length} image${selectedImages.length === 1 ? "" : "s"}…` : "Publish product"}</button>
+                <button className="admin-submit" disabled={saving || !newProductCategory || !selectedImages.length}>{saving && <LoaderCircle className="spin" size={15} />}{saving ? `Uploading ${selectedImages.length} image${selectedImages.length === 1 ? "" : "s"}…` : "Publish product"}</button>
+              </form>
+            </section>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={() => setShowCategoryModal(false)} style={{ zIndex: 60 }}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <button className="modal-close" onClick={() => setShowCategoryModal(false)} aria-label="Close form" style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 0, cursor: 'pointer' }}>
+              <X size={20} />
+            </button>
+            <section className="new-product-card" style={{ padding: '30px 40px', gridTemplateColumns: '1fr' }}>
+              <div>
+                <span style={{ fontSize: 10, letterSpacing: '0.2em', color: '#5B21A8', textTransform: 'uppercase' }}>NEW CATEGORY</span>
+                <h2 style={{ fontSize: 24, margin: '10px 0 20px', fontFamily: 'serif' }}>Add Category</h2>
+              </div>
+              <form onSubmit={addCategory}>
+                <label>Category Name<input name="name" required placeholder="e.g. Bridal Couture" autoFocus /></label>
+                <button className="admin-submit" disabled={categorySaving} style={{ marginTop: 15 }}>
+                  {categorySaving ? <LoaderCircle className="spin" size={15} /> : "Save Category"}
+                </button>
               </form>
             </section>
           </div>

@@ -32,7 +32,7 @@ export default async function Home() {
             alt="House of Anazodo couture"
             fill
             priority
-            className="object-cover object-[center_10%]"
+            className="object-cover mt-10 md:mt-5 md:object-[center_10%]"
             sizes="100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
@@ -170,10 +170,10 @@ export default async function Home() {
             </div>
           </FadeIn>
         </section>
-        { /* LOOKS TO EXPERIENCES */ }
+        { /* LOOKS TO EXPERIENCES */}
         <LooksCarousel />
 
-        { /* EXPERIENCE GALLERY (LIGHTBOX) */ }
+        { /* EXPERIENCE GALLERY (LIGHTBOX) */}
         <ExperienceGallery />
 
         {/* MANTRA STRIP */}

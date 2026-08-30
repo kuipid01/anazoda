@@ -27,3 +27,18 @@ export async function deleteLook(id: string) {
     .returning();
   return deleted;
 }
+
+export async function updateLook(id: string, data: Partial<{
+  title: string;
+  category: string;
+  priceRange: string;
+  images: Array<{ url: string; publicId: string }>;
+  position: number;
+}>) {
+  const [updated] = await getDb()
+    .update(looks)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(looks.id, id))
+    .returning();
+  return updated;
+}

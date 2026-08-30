@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { CheckCircle2, ImagePlus, LoaderCircle, Plus, Trash2, XCircle, X, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Category, Product, Look } from "@/lib/db/schema";
 
@@ -13,13 +14,25 @@ export default function ProductManager() {
 
   const [lookSaving, setLookSaving] = useState(false);
   const [deletingLook, setDeletingLook] = useState<string | null>(null);
-  const [lookImages, setLookImages] = useState<Array<{ file: File; preview: string }>>([]);
+  const [editLookId, setEditLookId] = useState<string | null>(null);
+  const [lookToDelete, setLookToDelete] = useState<Look | null>(null);
+  const [lookImages, setLookImages] = useState<Array<{ file?: File; preview: string; url?: string; publicId?: string }>>([]);
   const [lookCategory, setLookCategory] = useState("");
   const [lookPosition, setLookPosition] = useState<number | "">("");
 
   const [newProductCategory, setNewProductCategory] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"products" | "categories" | "social" | "looks">("products");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
+  const activeTab = (searchParams.get("tab") as "products" | "categories" | "social" | "looks") || "products";
+  
+  const setActiveTab = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
@@ -40,6 +53,33 @@ export default function ProductManager() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+
+  
+  function openEditLook(look: Look) {
+    setEditLookId(look.id);
+    setLookCategory(look.category);
+    setLookPosition(look.position);
+    setLookImages(look.images ? look.images.map(img => ({ preview: img.url, url: img.url, publicId: img.publicId, file: undefined as any })) : []);
+    
+    // Reset form values slightly hacky by wrapping in setTimeout for next tick
+    setTimeout(() => {
+      const form = document.getElementById("look-form") as HTMLFormElement;
+      if (form) {
+        (form.elements.namedItem("title") as HTMLInputElement).value = look.title;
+        (form.elements.namedItem("priceRange") as HTMLInputElement).value = look.priceRange || "";
+        window.scrollTo({ top: document.getElementById("look-form")?.offsetTop, behavior: 'smooth' });
+      }
+    }, 50);
+  }
+
+  function cancelEditLook() {
+    setEditLookId(null);
+    setLookCategory("");
+    setLookPosition("");
+    setLookImages([]);
+    const form = document.getElementById("look-form") as HTMLFormElement;
+    if (form) form.reset();
+  }
 
   function addLookImages(files: FileList | null) {
     if (!files) return;
@@ -202,7 +242,7 @@ export default function ProductManager() {
     payload.append("position", String(lookPosition));
 
     // Append images in their arranged order
-    lookImages.forEach((img) => payload.append("images", img.file));
+    lookImages.forEach((img) => { if (img.file) payload.append("images", img.file); });
 
     try {
       const response = await fetch("/api/admin/looks", { method: "POST", body: payload });
@@ -226,7 +266,6 @@ export default function ProductManager() {
   }
 
   async function removeLook(id: string) {
-    if (!window.confirm("Delete this look and its image?")) return;
     setDeletingLook(id);
     try {
       const response = await fetch(`/api/admin/looks/${id}`, { method: "DELETE" });
@@ -240,6 +279,7 @@ export default function ProductManager() {
       setToast({ type: "error", message: "Failed to delete look" });
     } finally {
       setDeletingLook(null);
+      setLookToDelete(null);
     }
   }
 
@@ -550,7 +590,7 @@ export default function ProductManager() {
                     <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px' }} className="hide-scrollbar">
                       {lookImages.map((img, idx) => (
                         <div
-                          key={img.file.name + idx}
+                          key={(img.file?.name || img.publicId || idx.toString()) + idx}
                           style={{ position: 'relative', width: '120px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: '1px solid #ddd', background: '#f9f9f9' }}
                         >
                           <div style={{ position: 'relative', height: '160px', width: '100%', overflow: 'hidden' }}>
@@ -649,10 +689,25 @@ export default function ProductManager() {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={lookSaving || !lookImages.length || !lookCategory || lookPosition === ""}
-                  style={{
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {editLookId && (
+                    <button
+                      type="button"
+                      onClick={cancelEditLook}
+                      disabled={lookSaving}
+                      style={{
+                        padding: '15px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '1px solid #ddd', background: '#fff', color: '#555', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em',
+                        cursor: lookSaving ? 'not-allowed' : 'pointer', borderRadius: 4
+                      }}
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={lookSaving || !lookImages.length || !lookCategory || lookPosition === ""}
+                    style={{ flex: 2,
                     padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
                     border: 0, background: (lookSaving || !lookImages.length || !lookCategory || lookPosition === "") ? '#c9c9c9' : '#090909',
                     color: '#fff', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em',
@@ -662,24 +717,50 @@ export default function ProductManager() {
                   }}
                 >
                   {lookSaving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
-                  {lookSaving ? "Uploading to Cloudinary..." : "Add Experience"}
+                  {lookSaving ? (editLookId ? "Updating..." : "Uploading to Cloudinary...") : (editLookId ? "Update Experience" : "Add Experience")}
                 </button>
+              </div>
               </form>
 
-              <div className="product-grid" style={{ marginTop: '30px' }}>
-                {looks.length ? looks.map((look) => (
-                  <article key={look.id} className="product-card">
-                    <img src={look.images?.[0]?.url} alt={look.title} loading="lazy" style={{ width: "100%", height: "200px", objectFit: "cover" }} />
-                    <div>
-                      <small>{look.category} · Position {look.position}</small>
-                      <h3>{look.title}</h3>
-                      {look.priceRange && <p>{look.priceRange}</p>}
-                    </div>
-                    <button disabled={deletingLook === look.id} onClick={() => removeLook(look.id)} aria-label={"Delete look"}>
-                      {deletingLook === look.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
-                    </button>
-                  </article>
-                )) : <div className="admin-empty"><ImagePlus /> No looks added yet.</div>}
+              <div style={{ marginTop: '40px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#0B0A0D', marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Published Experiences</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: '24px' }}>
+                  {looks.length ? looks.map((look) => (
+                    <article key={look.id} style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #eaeaea', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', transition: 'transform 0.2s ease, box-shadow 0.2s ease', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ position: 'relative', width: '100%', paddingTop: '120%' }}>
+                        <img src={look.images?.[0]?.url} alt={look.title} loading="lazy" style={{ position: 'absolute', top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                        {look.images?.length > 1 && (
+                          <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '10px', padding: '4px 8px', borderRadius: '20px', fontWeight: 600, letterSpacing: '0.05em' }}>
+                            {look.images.length} IMAGES
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', top: 10, left: 10, background: '#fff', color: '#0B0A0D', fontSize: '10px', padding: '4px 8px', borderRadius: '4px', fontWeight: 700, letterSpacing: '0.1em', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                          POS {look.position}
+                        </div>
+                      </div>
+                      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#5B21A8', fontWeight: 600, marginBottom: '6px' }}>{look.category}</span>
+                        <h3 style={{ fontSize: '18px', fontFamily: 'serif', color: '#0B0A0D', margin: '0 0 8px 0', lineHeight: 1.2 }}>{look.title}</h3>
+                        {look.priceRange && <p style={{ fontSize: '13px', color: '#777', margin: 0, marginTop: 'auto' }}>{look.priceRange}</p>}
+                      </div>
+                      <button 
+                        onClick={() => openEditLook(look)} 
+                        aria-label="Edit look"
+                        style={{ position: 'absolute', top: 10, right: 50, width: 32, height: 32, borderRadius: '50%', background: '#fff', color: '#5B21A8', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                      </button>
+                      <button 
+                        disabled={deletingLook === look.id} 
+                        onClick={() => setLookToDelete(look)} 
+                        aria-label="Delete look"
+                        style={{ position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: '50%', background: '#fff', color: '#ff3b30', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                      >
+                        {deletingLook === look.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                      </button>
+                    </article>
+                  )) : <div style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center', background: '#fbfbfb', border: '1px dashed #ddd', borderRadius: '12px', color: '#888' }}><ImagePlus size={32} style={{ margin: '0 auto 15px', opacity: 0.5 }} /> No experiences published yet. Add your first one above.</div>}
+                </div>
               </div>
             </div>
           </section>
@@ -691,13 +772,13 @@ export default function ProductManager() {
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowAddModal(false)} aria-label="Close form" style={{ position: 'absolute', top: '25px', right: '25px', background: 'none', border: 0, cursor: 'pointer', zIndex: 10 }}>
+            <button className="modal-close" onClick={() => setShowAddModal(false)} aria-label="Close form" style={{ position: "absolute", top: "15px", right: "15px", background: "none", border: 0, cursor: "pointer", zIndex: 10 }}>
               <X size={24} />
             </button>
-            <section className="new-product-card" id="new-product" style={{ gridTemplateColumns: '1fr', padding: '50px 60px' }}>
+            <section className="new-product-card" id="new-product" style={{ gridTemplateColumns: "1fr", padding: "clamp(25px, 5vw, 50px)" }}>
               <div>
-                <span>NEW PIECE</span>
-                <h2>Add to the collection</h2>
+                <span>{editLookId ? "EDIT EXPERIENCE" : "NEW PIECE"}</span>
+                <h2>{editLookId ? "Edit Experience" : "Add to the collection"}</h2>
                 <p>The image is optimized and stored in Cloudinary. Product details are saved in Neon.</p>
               </div>
               <form onSubmit={create}>
@@ -752,7 +833,7 @@ export default function ProductManager() {
             <button className="modal-close" onClick={() => setShowCategoryModal(false)} aria-label="Close form" style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 0, cursor: 'pointer' }}>
               <X size={20} />
             </button>
-            <section className="new-product-card" style={{ padding: '30px 40px', gridTemplateColumns: '1fr' }}>
+            <section className="new-product-card" style={{ padding: "clamp(25px, 5vw, 40px)", gridTemplateColumns: "1fr" }}>
               <div>
                 <span style={{ fontSize: 10, letterSpacing: '0.2em', color: '#5B21A8', textTransform: 'uppercase' }}>NEW CATEGORY</span>
                 <h2 style={{ fontSize: 24, margin: '10px 0 20px', fontFamily: 'serif' }}>Add Category</h2>
@@ -767,6 +848,39 @@ export default function ProductManager() {
           </div>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      {lookToDelete && (
+        <div className="modal-overlay" onClick={() => setLookToDelete(null)} style={{ zIndex: 70 }}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420, padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '30px', textAlign: 'center' }}>
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#fff0f0', color: '#ff3b30', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <Trash2 size={28} />
+              </div>
+              <h2 style={{ fontSize: 22, fontFamily: 'serif', margin: '0 0 10px 0', color: '#0B0A0D' }}>Delete Experience?</h2>
+              <p style={{ fontSize: 14, color: '#666', lineHeight: 1.5, margin: 0 }}>
+                Are you sure you want to permanently delete <strong>"{lookToDelete.title}"</strong> and its {lookToDelete.images?.length || 1} image{lookToDelete.images?.length !== 1 ? 's' : ''} from Cloudinary? This action cannot be undone.
+              </p>
+            </div>
+            <div style={{ display: 'flex', borderTop: '1px solid #eee' }}>
+              <button 
+                onClick={() => setLookToDelete(null)} 
+                disabled={deletingLook === lookToDelete.id}
+                style={{ flex: 1, padding: '16px', background: '#fff', border: 0, borderRight: '1px solid #eee', fontSize: 13, fontWeight: 600, color: '#555', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => removeLook(lookToDelete.id)} 
+                disabled={deletingLook === lookToDelete.id}
+                style={{ flex: 1, padding: '16px', background: '#fff0f0', border: 0, fontSize: 13, fontWeight: 600, color: '#ff3b30', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                {deletingLook === lookToDelete.id ? <><LoaderCircle className="spin" size={16} /> Deleting...</> : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

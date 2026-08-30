@@ -114,7 +114,16 @@ export default async function Footer() {
           </div>
         </section>
       </div>
-      <div className="copyright">Copyright © 2026 House of Anazodo. All rights reserved</div>
+      <div className="copyright" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+        <div>Copyright © 2026 House of Anazodo. All rights reserved</div>
+        <div style={{ display: 'flex', gap: '15px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <Link href="/bespoke-process" style={{ opacity: 0.8 }}>Bespoke Process</Link>
+          <Link href="/shipping" style={{ opacity: 0.8 }}>Shipping</Link>
+          <Link href="/couture-policies" style={{ opacity: 0.8 }}>Policies</Link>
+          <Link href="/terms-of-service" style={{ opacity: 0.8 }}>Terms</Link>
+          <Link href="/privacy-policy" style={{ opacity: 0.8 }}>Privacy</Link>
+        </div>
+      </div>
     </footer>
   );
 }

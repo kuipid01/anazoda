@@ -5,75 +5,68 @@ import Header from "@/components/Header";
 import WhatsAppButton from "@/components/WhatsAppButton";
 
 export const metadata: Metadata = {
-  title: "Pricing Guide | House of Anazodo",
-  description: "Explore the pricing guidelines for House of Anazodo's bespoke couture, including civil dresses, traditional attire, reception gowns, and hand-beaded creations."
+  title: "Investment | House of Anazodo",
+  description: "Explore the investment guidelines for House of Anazodo's bespoke and bridal couture."
 };
 
 export default function PricingPage() {
   return (
     <>
       <Header />
-      <main className="pricing-page">
-        <div className="page-hero dark">
-          <span>ATELIER SERVICES</span>
-          <h1>Our Pricing Guide</h1>
-          <p>Transparent pricing guidelines for our custom couture garments handcrafted in Lagos.</p>
+      <main className="min-h-screen py-16 px-6 md:px-20 lg:px-32 max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="text-[#5B21A8] font-semibold tracking-widest text-xs uppercase block mb-4">Investment</span>
+          <h1 className="text-4xl md:text-6xl font-medium font-serif">Pricing Guide</h1>
+          <p className="mt-6 text-gray-600 text-lg leading-relaxed max-w-3xl mx-auto">
+            Our bespoke creations are individually priced according to their level of craftsmanship, design complexity, and embellishment.
+          </p>
         </div>
         
-        <section className="pricing-content">
-          <div className="pricing-grid">
-            <article className="pricing-card">
-              <h3>Traditional Dresses</h3>
-              <div className="price-tag">From ₦1,500,000 & above</div>
-              <p>Meticulously tailored traditional attire featuring exquisite finishes and custom design options tailored to celebrate rich cultural heritage.</p>
-              <div className="note">
-                <strong>N/B:</strong> This is the price for tailoring only (fabric exclusive) and can increase depending on the style of your dress.
-              </div>
-            </article>
-
-            <article className="pricing-card">
-              <h3>Reception & Evening Gowns</h3>
-              <div className="price-tag">From ₦1,500,000 & above</div>
-              <p>Stunning, head-turning gowns designed to command attention at your reception or evening event. Handcrafted to your measurements.</p>
-              <div className="note">
-                <strong>N/B:</strong> Fabric and tailoring are inclusive. Tailoring-only options range from ₦1,000,000 & above depending on the design style.
-              </div>
-            </article>
-
-            <article className="pricing-card">
-              <h3>Aso-Oke Dresses</h3>
-              <div className="price-tag">From ₦2,000,000 & above</div>
-              <p>Stately and regal custom-made Aso-Oke ensembles. Features traditional luxury textures infused with modern couture silhouettes.</p>
-              <div className="note">
-                <strong>N/B:</strong> Custom fabric and tailoring are inclusive. This dress comes with a custom fan and a veil if needed.
-              </div>
-            </article>
-
-            <article className="pricing-card">
-              <h3>Civil Dress</h3>
-              <div className="price-tag">From ₦800,000 & above</div>
-              <p>Clean, sophisticated silhouettes designed for modern civil ceremonies. Elegant tailoring with minimal, luxurious finishes.</p>
-              <div className="note">
-                <strong>N/B:</strong> Fabric and tailoring are inclusive. This dress comes with a custom veil.
-              </div>
-            </article>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20">
+          <div className="bg-gray-50 p-10 border border-gray-100 shadow-sm">
+            <h2 className="text-2xl font-serif mb-6 border-b border-gray-200 pb-4">Starting Investment</h2>
+            <ul className="space-y-6">
+              <li className="flex justify-between items-end border-b border-gray-200 pb-2 border-dashed">
+                <span className="text-gray-700 font-medium text-lg">Bespoke Couture</span>
+                <span className="text-[#8B5CF6] font-semibold">From $1,500 (₦1,500,000)</span>
+              </li>
+              <li className="flex justify-between items-end border-b border-gray-200 pb-2 border-dashed">
+                <span className="text-gray-700 font-medium text-lg">Fully Hand-Beaded Couture</span>
+                <span className="text-[#8B5CF6] font-semibold">From $5,000 (₦7,760,000)</span>
+              </li>
+              <li className="flex justify-between items-end border-b border-gray-200 pb-2 border-dashed">
+                <span className="text-gray-700 font-medium text-lg">Bridal Couture</span>
+                <span className="text-[#8B5CF6] font-semibold">From $3,000</span>
+              </li>
+            </ul>
+            <p className="mt-8 text-sm text-gray-500 italic leading-relaxed">
+              * A detailed quotation is provided following your consultation. To preserve the privacy and exclusivity of our clientele, we do not disclose the prices of previously commissioned garments. Consultation fees are required to secure an appointment.
+            </p>
           </div>
 
-          <div className="pricing-additional">
-            <div>
-              <h3>Special Commissions & Hand Beading</h3>
-              <p>
-                <strong>Fully Hand-Beaded Dresses:</strong> Gowns without fabrics, featuring beads on a bare bodice from base to finish, start from <strong>₦4,000,000 & above</strong> due to the intensive labor and couture techniques involved.
+          <div className="bg-white p-10 border border-gray-100 shadow-sm">
+            <h2 className="text-2xl font-serif mb-6 border-b border-gray-200 pb-4">Payment Policy</h2>
+            <div className="space-y-6 text-gray-700">
+              <div className="flex gap-4">
+                <div className="text-[#5B21A8] font-bold text-xl">80%</div>
+                <p>Deposit is required before production begins.</p>
+              </div>
+              <div className="flex gap-4">
+                <div className="text-[#5B21A8] font-bold text-xl">20%</div>
+                <p>Remaining balance must be paid in full before collection or delivery.</p>
+              </div>
+              <p className="mt-6 text-sm text-gray-500 border-t border-gray-100 pt-4">
+                We accept payments in Nigerian Naira.
               </p>
-              <p>
-                <strong>Multi-Dress Discount:</strong> We are pleased to guarantee a discount if we create more than two dresses for the same client.
-              </p>
-            </div>
-            <div className="cta-container">
-              <Link href="/consultation" id="btn-book-pricing-cta">Book a Consultation</Link>
             </div>
           </div>
-        </section>
+        </div>
+
+        <div className="text-center">
+          <Link href="/consultation" className="inline-block border border-black bg-black text-white px-8 py-4 uppercase tracking-widest text-xs font-semibold hover:bg-[#8B5CF6] hover:border-[#8B5CF6] hover:text-white transition-colors">
+            Begin Your Couture Journey
+          </Link>
+        </div>
       </main>
       <Footer />
       <WhatsAppButton />

@@ -78,7 +78,7 @@ export default function BespokeProcessPage() {
               <p className="text-[#0B0A0D]/70 mb-8 max-w-2xl mx-auto text-sm md:text-[15px] leading-loose font-light">
                 Our bespoke creations are individually priced according to their level of craftsmanship, design complexity, and embellishment.
               </p>
-              <Link href="/pricing" className="inline-block bg-[#0B0A0D] text-white px-10 py-5 uppercase tracking-[0.2em] text-[11px] font-semibold hover:bg-[#d7af78] transition-colors">
+              <Link href="/pricing" className="inline-block bg-[#0B0A0D]! text-white! px-10 py-5 uppercase tracking-[0.2em] text-[11px] font-semibold hover:bg-[#d7af78] transition-colors">
                 View Pricing Guide
               </Link>
             </div>

@@ -29,7 +29,7 @@ export default function AboutPage() {
             <FadeIn>
               <div className="relative h-[70vh] min-h-[500px] w-full bg-[#EAE6DF]">
                 <Image
-                  src="/images/images/ceo.JPG"
+                  src="/images/ceo.JPG"
                   alt="Precious Anazodo"
                   fill
                   className="object-cover"

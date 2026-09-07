@@ -13,6 +13,11 @@ export async function POST(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   
   try {
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json({ error: "Invalid request format. Please use the form to submit." }, { status: 400 });
+    }
+
     const form = await req.formData();
     const imageFiles = form.getAll("images");
     
@@ -24,13 +29,20 @@ export async function POST(req: Request) {
     for (const file of imageFiles) {
       if (file instanceof File && file.size > 0) {
         if (!file.type.startsWith("image/")) {
-          return NextResponse.json({ error: "All files must be valid images" }, { status: 400 });
+          return NextResponse.json({ error: `"${file.name}" is not a valid image file. Please use JPG, PNG, or WebP.` }, { status: 400 });
         }
-        if (file.size > 10 * 1024 * 1024) {
-          return NextResponse.json({ error: "Images must be under 10MB" }, { status: 400 });
+        if (file.size > 20 * 1024 * 1024) {
+          return NextResponse.json({ error: `"${file.name}" exceeds the 20MB size limit. Please compress the image or choose a smaller file.` }, { status: 400 });
         }
-        const uploaded = await uploadProductImage(file);
-        uploadedImages.push({ url: uploaded.imageUrl, publicId: uploaded.imagePublicId });
+        try {
+          const uploaded = await uploadProductImage(file);
+          uploadedImages.push({ url: uploaded.imageUrl, publicId: uploaded.imagePublicId });
+        } catch (uploadError) {
+          console.error(`Failed to upload ${file.name}:`, uploadError);
+          return NextResponse.json({ 
+            error: uploadError instanceof Error ? uploadError.message : `Failed to upload "${file.name}". Please check your connection and try again.` 
+          }, { status: 502 });
+        }
       }
     }
 
@@ -57,6 +69,9 @@ export async function POST(req: Request) {
     return NextResponse.json(look);
   } catch (error) {
     console.error("Error creating look:", error);
-    return NextResponse.json({ error: "Failed to create look" }, { status: 500 });
+    if (error instanceof Error && error.message.includes("timeout")) {
+      return NextResponse.json({ error: "Upload timed out. Your internet connection may be slow. Please try again." }, { status: 504 });
+    }
+    return NextResponse.json({ error: "Failed to create look. Please try again." }, { status: 500 });
   }
 }

@@ -3,8 +3,13 @@
 import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { CheckCircle2, ImagePlus, LoaderCircle, Plus, Trash2, XCircle, X, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle2, ImagePlus, LoaderCircle, Plus, Trash2, XCircle, X, Info, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import type { Category, Product, Look } from "@/lib/db/schema";
+import { compressImage } from "@/lib/imageCompression";
+
+// Design tokens (was CSS variables in globals.css):
+// ink: #000000 · rose: #9c27b0 · purple: #5B21A8 · purple-bright: #8B5CF6
+// silver: #d8d5dc · cream: #f7f5f8 · line: #e7e2e9
 
 export default function ProductManager() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,9 +30,9 @@ export default function ProductManager() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   const activeTab = (searchParams.get("tab") as "products" | "categories" | "social" | "looks") || "products";
-  
+
   const setActiveTab = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
@@ -53,14 +58,12 @@ export default function ProductManager() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-
-  
   function openEditLook(look: Look) {
     setEditLookId(look.id);
     setLookCategory(look.category);
     setLookPosition(look.position);
     setLookImages(look.images ? look.images.map(img => ({ preview: img.url, url: img.url, publicId: img.publicId, file: undefined as any })) : []);
-    
+
     // Reset form values slightly hacky by wrapping in setTimeout for next tick
     setTimeout(() => {
       const form = document.getElementById("look-form") as HTMLFormElement;
@@ -84,12 +87,56 @@ export default function ProductManager() {
   function addLookImages(files: FileList | null) {
     if (!files) return;
     const incoming = Array.from(files);
-    setLookImages((current) => {
-      const available = Math.max(0, 10 - current.length);
-      const accepted = incoming.slice(0, available).map((file) => ({ file, preview: URL.createObjectURL(file) }));
-      if (incoming.length > available) setToast({ type: "error", message: "You can upload a maximum of 10 images per look." });
-      return [...current, ...accepted];
+
+    const oversized = incoming.filter(f => f.size > 20 * 1024 * 1024);
+    if (oversized.length > 0) {
+      setToast({
+        type: "error",
+        message: `${oversized.map(f => f.name).join(", ")} ${oversized.length === 1 ? "is" : "are"} too large. Please use images under 20MB each.`
+      });
+      return;
+    }
+
+    const totalSize = incoming.reduce((sum, f) => sum + f.size, 0);
+    const available = Math.max(0, 10 - lookImages.length);
+    const accepted = incoming.slice(0, available);
+
+    if (incoming.length > available) {
+      setToast({ type: "error", message: `You can upload a maximum of 10 images per look. ${incoming.length - available} image(s) were not added.` });
+    }
+    if (totalSize > 50 * 1024 * 1024) {
+      setToast({ type: "error", message: `Total upload size is large (${(totalSize / 1024 / 1024).toFixed(1)}MB). On slow connections this may fail. Consider using smaller images.` });
+    }
+
+    let processed = 0;
+    const newImages: Array<{ file: File; preview: string }> = [];
+
+    accepted.forEach((file) => {
+      compressImage(file, 1920, 0.8)
+        .then((compressedFile) => {
+          const preview = URL.createObjectURL(compressedFile);
+          newImages.push({ file: compressedFile, preview });
+          processed++;
+          if (processed === accepted.length) {
+            setLookImages((current) => [...current, ...newImages]);
+            if (compressedFile.size < file.size) {
+              setToast({ type: "success", message: `Images optimized for upload (${((1 - compressedFile.size / file.size) * 100).toFixed(0)}% smaller).` });
+            }
+          }
+        })
+        .catch(() => {
+          const preview = URL.createObjectURL(file);
+          newImages.push({ file, preview });
+          processed++;
+          if (processed === accepted.length) {
+            setLookImages((current) => [...current, ...newImages]);
+          }
+        });
     });
+
+    if (accepted.length === 0) {
+      setLookImages((current) => [...current, ...newImages]);
+    }
   }
 
   function moveLookImage(index: number, direction: 'left' | 'right') {
@@ -397,102 +444,145 @@ export default function ProductManager() {
 
   const money = (p: Product) => new Intl.NumberFormat("en-NG", { style: "currency", currency: p.currency }).format(p.price / 100);
 
-  return (
-    <div className="admin-shell">
-      {toast && <div className={`admin-toast ${toast.type}`} role="status" aria-live="polite">
-        {toast.type === "success" ? <CheckCircle2 /> : <XCircle />}
-        <span>{toast.message}</span>
-        <button onClick={() => setToast(null)} aria-label="Dismiss notification">×</button>
-      </div>}
+  // Reusable Tailwind class fragments
+  const navBtn = (active: boolean) =>
+    `w-full text-left px-3.5 py-3 text-[13px] font-medium rounded-sm transition-colors ${
+      active ? "text-white bg-white/10 border-l-2 border-violet-500" : "text-neutral-400 hover:text-white"
+    } sm:flex-none sm:w-auto sm:px-4 sm:py-2 sm:text-xs sm:border sm:border-white/10 sm:rounded max-sm:flex-1 max-sm:whitespace-nowrap`;
 
-      <aside className="admin-sidebar">
-        <div className="sidebar-header-row">
-          <div className="brand-group">
-            <div className="monogram">PA</div>
-            <strong>House of Anazodo</strong>
+  const inputBase = "w-full border border-neutral-300 bg-white px-3.5 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-violet-500";
+  const labelBase = "flex flex-col gap-2 text-[9px] font-semibold uppercase tracking-wider";
+
+  return (
+    <div className="min-h-screen bg-neutral-100 flex flex-col md:grid md:grid-cols-[245px_1fr]">
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed z-[200] top-6 right-6 w-[min(390px,calc(100vw-32px))] grid grid-cols-[22px_1fr_22px] items-center gap-3 px-4.5 py-4 text-white shadow-2xl animate-[toast-in_0.25s_ease-out] ${
+            toast.type === "success" ? "bg-emerald-800" : "bg-rose-800"
+          }`}
+        >
+          {toast.type === "success" ? <CheckCircle2 className="w-[19px]" /> : <XCircle className="w-[19px]" />}
+          <span className="text-xs leading-relaxed">{toast.message}</span>
+          <button onClick={() => setToast(null)} aria-label="Dismiss notification" className="text-white text-xl leading-none">×</button>
+        </div>
+      )}
+
+      {/* Sidebar */}
+      <aside className="bg-[#0b090c] text-white flex flex-col p-5 gap-4 md:p-9 md:sticky md:top-0 md:h-screen">
+        <div className="flex flex-row justify-between items-center w-full md:flex-col md:items-start">
+          <div className="flex flex-row items-center gap-2.5 md:flex-col md:items-start">
+            <div className="font-serif text-[28px] md:text-[44px] text-violet-300 leading-none">PA</div>
+            <strong className="font-serif text-[16px] md:text-[19px] md:mt-2">House of Anazodo</strong>
           </div>
-          <form action="/api/admin/logout" method="post" className="logout-form">
-            <button type="submit">Sign out</button>
+          <form action="/api/admin/logout" method="post" className="mt-0 md:mt-auto">
+            <button type="submit" className="border border-white/20 bg-transparent text-white px-3.5 py-2 text-[11px] md:w-full md:p-3 cursor-pointer">
+              Sign out
+            </button>
           </form>
         </div>
-        <nav className="admin-nav">
-          <button onClick={() => setActiveTab("products")} className={activeTab === "products" ? "active" : ""}>Products</button>
-          <button onClick={() => setActiveTab("categories")} className={activeTab === "categories" ? "active" : ""}>Categories</button>
-          <button onClick={() => setActiveTab("social")} className={activeTab === "social" ? "active" : ""}>Social Media</button>
-          <button onClick={() => setActiveTab("looks")} className={activeTab === "looks" ? "active" : ""}>Looks & Experiences</button>
-          <a href="/" target="_blank">View website ↗</a>
+        <nav className="flex flex-row gap-2 overflow-x-auto pb-2 mt-2.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] md:flex-col md:overflow-visible md:pb-0 md:mt-14 [&::-webkit-scrollbar]:hidden">
+          <button onClick={() => setActiveTab("products")} className={navBtn(activeTab === "products")}>Products</button>
+          <button onClick={() => setActiveTab("categories")} className={navBtn(activeTab === "categories")}>Categories</button>
+          <button onClick={() => setActiveTab("social")} className={navBtn(activeTab === "social")}>Social Media</button>
+          <button onClick={() => setActiveTab("looks")} className={navBtn(activeTab === "looks")}>Looks &amp; Experiences</button>
+          <a href="/" target="_blank" className="hidden md:inline-block mt-2.5 px-4 py-2 border border-white/20 rounded text-neutral-400 text-xs text-center hover:text-white hover:border-white/50">
+            View website ↗
+          </a>
         </nav>
       </aside>
 
-      <main className="admin-main">
+      <main className="p-4 md:p-5 md:px-[1%] min-w-0">
         {activeTab === "products" && (
           <>
-            <div className="admin-title">
+            <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6 md:mb-10">
               <div>
-                <span>ATELIER CMS</span>
-                <h1>Product collection</h1>
+                <span className="text-[10px] font-semibold tracking-[0.18em] text-violet-500">ATELIER CMS</span>
+                <h1 className="font-serif text-[28px] md:text-[48px] my-1">Product collection</h1>
               </div>
-              <div className="admin-actions-row">
-                <button onClick={handleSeedProducts} disabled={loading || saving} className="btn-seed">Seed Test Products</button>
-                <button onClick={handleClearProducts} disabled={loading || saving} className="btn-clear">Clear Collection</button>
-                <button onClick={() => setShowAddModal(true)} className="btn-add"><Plus size={17} /> Add product</button>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={handleSeedProducts} disabled={loading || saving} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#5B21A8] text-white border-0 px-4 py-3 md:py-3.5 text-[10px] md:text-[11px] uppercase tracking-wide cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                  Seed Test Products
+                </button>
+                <button onClick={handleClearProducts} disabled={loading || saving} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-rose-800 text-white border-0 px-4 py-3 md:py-3.5 text-[10px] md:text-[11px] uppercase tracking-wide cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                  Clear Collection
+                </button>
+                <button onClick={() => setShowAddModal(true)} className="w-full md:w-auto flex items-center justify-center gap-2 bg-neutral-950 text-white border-0 px-4 py-3 md:py-3.5 text-[10px] md:text-[11px] uppercase tracking-wide cursor-pointer">
+                  <Plus size={17} /> Add product
+                </button>
               </div>
             </div>
 
-            {error && <div className="admin-error">{error}</div>}
+            {error && <div className="bg-rose-50 text-rose-800 p-3.5 my-2.5 text-xs">{error}</div>}
 
-            <section className="product-admin-grid">
-              {loading ? <div className="admin-empty"><LoaderCircle className="spin" /> Loading products…</div> :
-                products.length ? products.map((product) => (
-                  <article className="admin-product" key={product.id}>
-                    <Image src={product.imageUrl} alt="" width={260} height={320} unoptimized />
-                    <div><small>{product.category}</small><h3>{product.name}</h3><p>{money(product)}</p></div>
-                    <button onClick={() => remove(product.id)} aria-label={`Delete ${product.name}`}><Trash2 size={16} /></button>
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mb-16">
+              {loading ? (
+                <div className="col-span-full bg-white p-14 flex items-center justify-center gap-3 text-neutral-500">
+                  <LoaderCircle className="animate-spin" /> Loading products…
+                </div>
+              ) : products.length ? (
+                products.map((product) => (
+                  <article className="bg-white relative" key={product.id}>
+                    <Image src={product.imageUrl} alt="" width={260} height={320} unoptimized className="w-full h-auto aspect-[4/5] object-cover md:h-[280px]" />
+                    <div className="p-4.5">
+                      <small className="text-violet-700 uppercase text-[8px] tracking-wider">{product.category}</small>
+                      <h3 className="font-serif text-[18px] md:text-[23px] my-1">{product.name}</h3>
+                      <p className="m-0 text-neutral-500 text-xs">{money(product)}</p>
+                    </div>
+                    <button onClick={() => remove(product.id)} aria-label={`Delete ${product.name}`} className="absolute right-2.5 top-2.5 w-[35px] h-[35px] border-0 bg-white text-rose-800 flex items-center justify-center cursor-pointer">
+                      <Trash2 size={16} />
+                    </button>
                   </article>
-                )) : <div className="admin-empty"><ImagePlus /> No products yet. Add the first couture piece.</div>}
+                ))
+              ) : (
+                <div className="col-span-full bg-white p-14 flex items-center justify-center gap-3 text-neutral-500">
+                  <ImagePlus /> No products yet. Add the first couture piece.
+                </div>
+              )}
             </section>
           </>
         )}
 
         {activeTab === "categories" && (
-          <section className="category-manager" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
+          <section className="bg-white p-5 md:p-10 mb-6">
             <div>
-              <span>CATALOGUE ORGANISATION</span>
-              <h2>Categories</h2>
-              <p>Create reusable categories, then assign them when adding products or looks.</p>
+              <span className="text-[9px] tracking-[0.16em] text-violet-700">CATALOGUE ORGANISATION</span>
+              <h2 className="font-serif text-[28px] md:text-[38px] my-2">Categories</h2>
+              <p className="text-neutral-500 leading-relaxed">Create reusable categories, then assign them when adding products or looks.</p>
             </div>
-            <div>
-              <form onSubmit={addCategory} style={{ display: "flex", gap: 10 }}>
-                <input name="name" required disabled={categorySaving} placeholder="e.g. Bridal Couture" style={{ flex: 1 }} />
-                <button type="submit" disabled={categorySaving}>
-                  {categorySaving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
+            <div className="mt-6">
+              <form onSubmit={addCategory} className="flex flex-col sm:flex-row gap-2.5">
+                <input name="name" required disabled={categorySaving} placeholder="e.g. Bridal Couture" className={`${inputBase} flex-1 disabled:opacity-65 disabled:cursor-not-allowed`} />
+                <button type="submit" disabled={categorySaving} className="min-w-[135px] flex items-center justify-center gap-1.5 border-0 bg-neutral-950 text-white px-4.5 py-3 uppercase text-[9px] tracking-wide disabled:opacity-65 disabled:cursor-not-allowed">
+                  {categorySaving ? <LoaderCircle className="animate-spin" size={15} /> : <Plus size={15} />}
                   {categorySaving ? "Adding…" : "Add category"}
                 </button>
               </form>
-              <div className="category-tags">
+              <div className="flex flex-wrap gap-2.5 mt-5.5">
                 {categories.length ? categories.map((category) => (
-                  <span key={category.id}>
+                  <span key={category.id} className="flex items-center gap-2.5 px-3 py-2.5 bg-[#f7f5f8] text-[11px]">
                     {category.name}
-                    <button disabled={deletingCategory === category.id} onClick={() => removeCategory(category.id)} aria-label={`Delete ${category.name}`}>
-                      {deletingCategory === category.id ? <LoaderCircle className="spin" size={13} /> : <Trash2 size={13} />}
+                    <button disabled={deletingCategory === category.id} onClick={() => removeCategory(category.id)} aria-label={`Delete ${category.name}`} className="flex items-center justify-center p-0 border-0 bg-transparent text-rose-800 cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                      {deletingCategory === category.id ? <LoaderCircle className="animate-spin" size={13} /> : <Trash2 size={13} />}
                     </button>
                   </span>
-                )) : <p>No categories yet. Add your first one above.</p>}
+                )) : <p className="text-neutral-500">No categories yet. Add your first one above.</p>}
               </div>
             </div>
           </section>
         )}
 
         {activeTab === "social" && (
-          <section className="category-manager" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
+          <section className="bg-white p-5 md:p-10 mb-6">
             <div>
-              <span>SOCIAL PRESENCE</span>
-              <h2>Social Media</h2>
-              <p>Manage your dynamic social links. Active platforms will automatically show in the footer.</p>
+              <span className="text-[9px] tracking-[0.16em] text-violet-700">SOCIAL PRESENCE</span>
+              <h2 className="font-serif text-[28px] md:text-[38px] my-2">Social Media</h2>
+              <p className="text-neutral-500 leading-relaxed">Manage your dynamic social links. Active platforms will automatically show in the footer.</p>
             </div>
-            <div>
-              <form onSubmit={saveSocialLink} style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                <select name="platform" required style={{ flex: '1 1 120px', padding: '13px', border: '1px solid #ddd', background: '#fff' }}>
+            <div className="mt-6">
+              <form onSubmit={saveSocialLink} className="flex flex-col sm:flex-row flex-wrap gap-2.5">
+                <select name="platform" required className="flex-1 min-w-[120px] p-3.5 border border-neutral-300 bg-white">
                   <option value="">Select Platform</option>
                   <option value="Instagram">Instagram</option>
                   <option value="Facebook">Facebook</option>
@@ -502,57 +592,45 @@ export default function ProductManager() {
                   <option value="WhatsApp">WhatsApp</option>
                   <option value="YouTube">YouTube</option>
                 </select>
-                <input name="url" type="url" required placeholder="https://instagram.com/houseofanazodo" style={{ flex: '2 1 240px', padding: '13px', border: '1px solid #ddd' }} />
-                <button type="submit" disabled={socialSaving} style={{ minWidth: '135px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', border: 0, background: '#090909', color: '#fff', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.15em', cursor: 'pointer' }}>
-                  {socialSaving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
+                <input name="url" type="url" required placeholder="https://instagram.com/houseofanazodo" className="flex-[2] min-w-[240px] p-3.5 border border-neutral-300" />
+                <button type="submit" disabled={socialSaving} className="min-w-[135px] flex items-center justify-center gap-1.5 border-0 bg-neutral-950 text-white text-[9px] uppercase tracking-wide cursor-pointer disabled:opacity-65 disabled:cursor-not-allowed">
+                  {socialSaving ? <LoaderCircle className="animate-spin" size={15} /> : <Plus size={15} />}
                   {socialSaving ? "Saving…" : "Save Link"}
                 </button>
               </form>
-              <div className="category-tags" style={{ marginTop: '22px' }}>
+              <div className="flex flex-wrap gap-2.5 mt-5.5">
                 {socials.length ? socials.map((item) => (
-                  <span key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span key={item.id} className="flex items-center gap-3 px-3 py-2.5 bg-[#f7f5f8] text-[11px]">
                     <strong>{item.platform}:</strong>
-                    <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', color: 'var(--purple)' }}>{item.url}</a>
-                    <button disabled={deletingSocial === item.id} onClick={() => removeSocialLink(item.id)} aria-label={`Delete ${item.platform}`}>
-                      {deletingSocial === item.id ? <LoaderCircle className="spin" size={13} /> : <Trash2 size={13} />}
+                    <a href={item.url} target="_blank" rel="noreferrer" className="underline text-violet-700 break-all">{item.url}</a>
+                    <button disabled={deletingSocial === item.id} onClick={() => removeSocialLink(item.id)} aria-label={`Delete ${item.platform}`} className="flex items-center justify-center p-0 border-0 bg-transparent text-rose-800 cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                      {deletingSocial === item.id ? <LoaderCircle className="animate-spin" size={13} /> : <Trash2 size={13} />}
                     </button>
                   </span>
-                )) : <p>No dynamic social media links set yet.</p>}
+                )) : <p className="text-neutral-500">No dynamic social media links set yet.</p>}
               </div>
             </div>
           </section>
         )}
 
         {activeTab === "looks" && (
-          <section className="category-manager" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
+          <section className="bg-white p-5 md:p-10 mb-6">
             <div>
-              <span>EXPERIENCES</span>
-              <h2>Looks to Experiences</h2>
-              <p>Create visual looks with an optional price range. These will be displayed in a horizontally scrolling section.</p>
+              <span className="text-[9px] tracking-[0.16em] text-violet-700">EXPERIENCES</span>
+              <h2 className="font-serif text-[28px] md:text-[38px] my-2">Looks to Experiences</h2>
+              <p className="text-neutral-500 leading-relaxed">Create visual looks with an optional price range. These will be displayed in a horizontally scrolling section.</p>
             </div>
-            <div>
-              <form
-                onSubmit={saveLook}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '18px',
-                  background: '#fbfbfb',
-                  padding: '24px',
-                  border: '1px solid #e6e6e6'
-                }}
-              >
+            <div className="mt-6">
+              <form id="look-form" onSubmit={saveLook} className="flex flex-col gap-4.5 bg-[#fbfbfb] p-5 md:p-6 border border-neutral-200">
                 <div>
-                  <label style={{ display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#8a8a8a', marginBottom: 6 }}>
-                    Category
-                  </label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <label className="block text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5">Category</label>
+                  <div className="flex gap-2.5 items-center">
                     <select
                       name="category"
                       value={lookCategory}
                       onChange={(e) => setLookCategory(e.target.value)}
                       required
-                      style={{ flex: 1, padding: '13px', border: '1px solid #ddd', background: '#fff' }}
+                      className="flex-1 min-w-0 p-3.5 border border-neutral-300 bg-white"
                     >
                       <option value="">{categories.length ? "Select Category" : "Add a category first"}</option>
                       {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -560,43 +638,43 @@ export default function ProductManager() {
                     <button
                       type="button"
                       onClick={() => setShowCategoryModal(true)}
-                      style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0A0D', color: '#fff', border: 0, cursor: 'pointer' }}
                       aria-label="Add new category"
+                      className="w-12 h-12 flex items-center justify-center bg-[#0B0A0D] text-white border-0 cursor-pointer flex-shrink-0"
                     >
                       <Plus size={18} />
                     </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <input name="title" required placeholder="Look Title (e.g. Traditional Bridal)" style={{ flex: '1 1 220px', padding: '13px', border: '1px solid #ddd' }} />
-                  <input name="priceRange" placeholder="Price Range (e.g. $1000 - $3000)" style={{ flex: '1 1 200px', padding: '13px', border: '1px solid #ddd' }} />
+                <div className="flex gap-2.5 flex-wrap">
+                  <input name="title" required placeholder="Look Title (e.g. Traditional Bridal)" className="flex-1 min-w-[220px] p-3.5 border border-neutral-300" />
+                  <input name="priceRange" placeholder="Price Range (e.g. $1000 - $3000)" className="flex-1 min-w-[200px] p-3.5 border border-neutral-300" />
                 </div>
 
-                <label className="admin-upload" style={{ width: '100%', padding: '40px 20px', border: '2px dashed #e0e0e0', background: '#fafafa', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                  <ImagePlus size={32} color="#a0a0a0" style={{ marginBottom: '10px' }} />
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>{lookImages.length ? "Add More Images" : "Choose Featured Images"}</span>
-                  <span style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>Select multiple images at once (up to 10).</span>
-                  <input type="file" accept="image/*" multiple disabled={lookSaving || lookImages.length >= 10} onChange={(e) => addLookImages(e.target.files)} style={{ display: 'none' }} />
+                <label className="w-full p-8 md:p-10 border-2 border-dashed border-neutral-200 bg-neutral-50 rounded-lg flex flex-col items-center justify-center cursor-pointer text-center transition-colors">
+                  <ImagePlus size={32} className="text-neutral-400 mb-2.5" />
+                  <span className="text-sm font-medium text-neutral-800">{lookImages.length ? "Add More Images" : "Choose Featured Images"}</span>
+                  <span className="text-xs text-neutral-500 mt-1.5">Select multiple images at once (up to 10).</span>
+                  <input type="file" accept="image/*" multiple disabled={lookSaving || lookImages.length >= 10} onChange={(e) => addLookImages(e.target.files)} className="hidden" />
                 </label>
 
                 {lookImages.length > 0 && (
-                  <div style={{ marginTop: '20px', padding: '20px', background: '#fff', border: '1px solid #eaeaea', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                      <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#5B21A8', fontWeight: 600 }}>Arrange Image Order</span>
-                      <span style={{ fontSize: 11, color: '#888' }}>{lookImages.length}/10 images</span>
+                  <div className="mt-5 p-5 bg-white border border-neutral-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-[11px] uppercase tracking-wider text-violet-700 font-semibold">Arrange Image Order</span>
+                      <span className="text-[11px] text-neutral-500">{lookImages.length}/10 images</span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px' }} className="hide-scrollbar">
+                    <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {lookImages.map((img, idx) => (
                         <div
                           key={(img.file?.name || img.publicId || idx.toString()) + idx}
-                          style={{ position: 'relative', width: '120px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: '1px solid #ddd', background: '#f9f9f9' }}
+                          className="relative w-[100px] md:w-[120px] flex-shrink-0 rounded-md overflow-hidden border border-neutral-300 bg-neutral-50"
                         >
-                          <div style={{ position: 'relative', height: '160px', width: '100%', overflow: 'hidden' }}>
-                            <img src={img.preview} alt="Look preview" style={{ height: '100%', width: '100%', objectFit: 'cover', display: 'block' }} />
+                          <div className="relative h-[130px] md:h-[160px] w-full overflow-hidden">
+                            <img src={img.preview} alt="Look preview" className="h-full w-full object-cover block" />
 
-                            <div style={{ position: 'absolute', top: 5, left: 5, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, lineHeight: 1, padding: '4px 6px', borderRadius: 10 }}>
+                            <div className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] leading-none px-1.5 py-1 rounded-full">
                               {idx + 1}
                             </div>
 
@@ -604,73 +682,39 @@ export default function ProductManager() {
                               type="button"
                               onClick={() => removeLookImage(idx)}
                               aria-label="Remove image"
-                              style={{
-                                position: 'absolute',
-                                top: 5,
-                                right: 5,
-                                width: 20,
-                                height: 20,
-                                minWidth: 20,
-                                minHeight: 20,
-                                maxWidth: 20,
-                                maxHeight: 20,
-                                boxSizing: 'border-box',
-                                padding: 0,
-                                margin: 0,
-                                lineHeight: 0,
-                                borderRadius: '50%',
-                                background: '#ff3b30',
-                                color: '#fff',
-                                border: 0,
-                                outline: 'none',
-                                appearance: 'none',
-                                WebkitAppearance: 'none',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}
+                              className="absolute top-1.5 right-1.5 w-[18px] h-[18px] md:w-5 md:h-5 box-border p-0 m-0 leading-none rounded-full bg-red-500 text-white border-0 outline-none appearance-none cursor-pointer flex items-center justify-center flex-shrink-0"
                             >
-                              <X size={11} style={{ width: 11, height: 11, display: 'block', flexShrink: 0 }} />
+                              <X size={11} className="block flex-shrink-0" />
                             </button>
                           </div>
 
-                          <div style={{ display: 'flex', width: '100%', borderTop: '1px solid #eee' }}>
+                          <div className="flex w-full border-t border-neutral-200">
                             <button
                               type="button"
                               disabled={idx === 0}
                               onClick={() => moveLookImage(idx, 'left')}
-                              style={{
-                                flex: 1, padding: '6px 0', boxSizing: 'border-box', display: 'flex', justifyContent: 'center',
-                                background: idx === 0 ? '#f0f0f0' : '#fff', color: idx === 0 ? '#ccc' : '#333',
-                                border: 0, borderRight: '1px solid #eee', cursor: idx === 0 ? 'not-allowed' : 'pointer'
-                              }}
+                              className={`flex-1 py-1.5 box-border flex justify-center border-r border-neutral-200 ${idx === 0 ? "bg-neutral-100 text-neutral-300 cursor-not-allowed" : "bg-white text-neutral-800 cursor-pointer"}`}
                             >
-                              <ChevronLeft size={16} style={{ display: 'block' }} />
+                              <ChevronLeft size={16} className="block" />
                             </button>
                             <button
                               type="button"
                               disabled={idx === lookImages.length - 1}
                               onClick={() => moveLookImage(idx, 'right')}
-                              style={{
-                                flex: 1, padding: '6px 0', boxSizing: 'border-box', display: 'flex', justifyContent: 'center',
-                                background: idx === lookImages.length - 1 ? '#f0f0f0' : '#fff', color: idx === lookImages.length - 1 ? '#ccc' : '#333',
-                                border: 0, cursor: idx === lookImages.length - 1 ? 'not-allowed' : 'pointer'
-                              }}
+                              className={`flex-1 py-1.5 box-border flex justify-center ${idx === lookImages.length - 1 ? "bg-neutral-100 text-neutral-300 cursor-not-allowed" : "bg-white text-neutral-800 cursor-pointer"}`}
                             >
-                              <ChevronRight size={16} style={{ display: 'block' }} />
+                              <ChevronRight size={16} className="block" />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #ddd', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#5B21A8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div className="mt-4 pt-4 border-t border-dashed border-neutral-300 flex flex-col gap-2">
+                      <label className="text-[11px] uppercase tracking-wider text-violet-700 font-semibold flex items-center gap-1.5">
                         Look Display Order <Info size={12} />
                       </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="flex items-center gap-3 flex-wrap">
                         <input
                           name="position"
                           type="number"
@@ -679,9 +723,9 @@ export default function ProductManager() {
                           value={lookPosition}
                           onChange={(e) => setLookPosition(e.target.value ? Number(e.target.value) : "")}
                           placeholder="e.g. 1"
-                          style={{ width: '80px', padding: '10px', border: '1px solid #ddd', textAlign: 'center', borderRadius: 4 }}
+                          className="w-20 p-2.5 border border-neutral-300 text-center rounded"
                         />
-                        <span style={{ fontSize: 12, color: '#777', lineHeight: 1.4 }}>
+                        <span className="text-xs text-neutral-500 leading-relaxed">
                           Determines where this entire Experience appears on the homepage carousel.
                         </span>
                       </div>
@@ -689,17 +733,13 @@ export default function ProductManager() {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="flex flex-col sm:flex-row gap-2.5">
                   {editLookId && (
                     <button
                       type="button"
                       onClick={cancelEditLook}
                       disabled={lookSaving}
-                      style={{
-                        padding: '15px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '1px solid #ddd', background: '#fff', color: '#555', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em',
-                        cursor: lookSaving ? 'not-allowed' : 'pointer', borderRadius: 4
-                      }}
+                      className="p-4 flex-1 flex items-center justify-center border border-neutral-300 bg-white text-neutral-600 text-[11px] uppercase tracking-wide rounded disabled:cursor-not-allowed"
                     >
                       Cancel Edit
                     </button>
@@ -707,93 +747,97 @@ export default function ProductManager() {
                   <button
                     type="submit"
                     disabled={lookSaving || !lookImages.length || !lookCategory || lookPosition === ""}
-                    style={{ flex: 2,
-                    padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-                    border: 0, background: (lookSaving || !lookImages.length || !lookCategory || lookPosition === "") ? '#c9c9c9' : '#090909',
-                    color: '#fff', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em',
-                    cursor: (lookSaving || !lookImages.length || !lookCategory || lookPosition === "") ? 'not-allowed' : 'pointer',
-                    transition: 'background 0.15s ease',
-                    borderRadius: 4
-                  }}
-                >
-                  {lookSaving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
-                  {lookSaving ? (editLookId ? "Updating..." : "Uploading to Cloudinary...") : (editLookId ? "Update Experience" : "Add Experience")}
-                </button>
-              </div>
+                    className={`sm:flex-[2] p-4 flex items-center justify-center gap-1.5 border-0 text-white text-[11px] uppercase tracking-wide rounded transition-colors ${
+                      (lookSaving || !lookImages.length || !lookCategory || lookPosition === "") ? "bg-neutral-300 cursor-not-allowed" : "bg-neutral-950 cursor-pointer"
+                    }`}
+                  >
+                    {lookSaving ? <LoaderCircle className="animate-spin" size={15} /> : <Plus size={15} />}
+                    {lookSaving ? (editLookId ? "Updating..." : "Uploading to Cloudinary...") : (editLookId ? "Update Experience" : "Add Experience")}
+                  </button>
+                </div>
               </form>
 
-              <div style={{ marginTop: '40px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#0B0A0D', marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Published Experiences</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: '24px' }}>
+              <div className="mt-10">
+                <h3 className="text-sm font-semibold text-[#0B0A0D] mb-5 uppercase tracking-wide">Published Experiences</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {looks.length ? looks.map((look) => (
-                    <article key={look.id} style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #eaeaea', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', transition: 'transform 0.2s ease, box-shadow 0.2s ease', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ position: 'relative', width: '100%', paddingTop: '120%' }}>
-                        <img src={look.images?.[0]?.url} alt={look.title} loading="lazy" style={{ position: 'absolute', top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    <article key={look.id} className="bg-white rounded-xl overflow-hidden border border-neutral-200 shadow-sm relative flex flex-col">
+                      <div className="relative w-full pt-[120%]">
+                        <img src={look.images?.[0]?.url} alt={look.title} loading="lazy" className="absolute top-0 left-0 w-full h-full object-cover" />
                         {look.images?.length > 1 && (
-                          <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '10px', padding: '4px 8px', borderRadius: '20px', fontWeight: 600, letterSpacing: '0.05em' }}>
+                          <div className="absolute bottom-2.5 right-2.5 bg-black/70 text-white text-[10px] px-2 py-1 rounded-full font-semibold tracking-wide">
                             {look.images.length} IMAGES
                           </div>
                         )}
-                        <div style={{ position: 'absolute', top: 10, left: 10, background: '#fff', color: '#0B0A0D', fontSize: '10px', padding: '4px 8px', borderRadius: '4px', fontWeight: 700, letterSpacing: '0.1em', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <div className="absolute top-2.5 left-2.5 bg-white text-[#0B0A0D] text-[10px] px-2 py-1 rounded font-bold tracking-wider shadow-md">
                           POS {look.position}
                         </div>
                       </div>
-                      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#5B21A8', fontWeight: 600, marginBottom: '6px' }}>{look.category}</span>
-                        <h3 style={{ fontSize: '18px', fontFamily: 'serif', color: '#0B0A0D', margin: '0 0 8px 0', lineHeight: 1.2 }}>{look.title}</h3>
-                        {look.priceRange && <p style={{ fontSize: '13px', color: '#777', margin: 0, marginTop: 'auto' }}>{look.priceRange}</p>}
+                      <div className="p-5 flex flex-col flex-1">
+                        <span className="text-[10px] uppercase tracking-wider text-violet-700 font-semibold mb-1.5">{look.category}</span>
+                        <h3 className="text-lg font-serif text-[#0B0A0D] mb-2 leading-tight">{look.title}</h3>
+                        {look.priceRange && <p className="text-[13px] text-neutral-500 m-0 mt-auto">{look.priceRange}</p>}
                       </div>
-                      <button 
-                        onClick={() => openEditLook(look)} 
+                      <button
+                        onClick={() => openEditLook(look)}
                         aria-label="Edit look"
-                        style={{ position: 'absolute', top: 10, right: 50, width: 32, height: 32, borderRadius: '50%', background: '#fff', color: '#5B21A8', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                        className="absolute top-2.5 right-[50px] w-8 h-8 rounded-full bg-white text-violet-700 border-0 cursor-pointer flex items-center justify-center shadow-md"
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <Pencil size={16} />
                       </button>
-                      <button 
-                        disabled={deletingLook === look.id} 
-                        onClick={() => setLookToDelete(look)} 
+                      <button
+                        disabled={deletingLook === look.id}
+                        onClick={() => setLookToDelete(look)}
                         aria-label="Delete look"
-                        style={{ position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: '50%', background: '#fff', color: '#ff3b30', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white text-red-500 border-0 cursor-pointer flex items-center justify-center shadow-md disabled:opacity-60 disabled:cursor-wait"
                       >
-                        {deletingLook === look.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
+                        {deletingLook === look.id ? <LoaderCircle className="animate-spin" size={16} /> : <Trash2 size={16} />}
                       </button>
                     </article>
-                  )) : <div style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center', background: '#fbfbfb', border: '1px dashed #ddd', borderRadius: '12px', color: '#888' }}><ImagePlus size={32} style={{ margin: '0 auto 15px', opacity: 0.5 }} /> No experiences published yet. Add your first one above.</div>}
+                  )) : (
+                    <div className="col-span-full py-16 px-5 text-center bg-[#fbfbfb] border border-dashed border-neutral-300 rounded-xl text-neutral-500">
+                      <ImagePlus size={32} className="mx-auto mb-4 opacity-50" /> No experiences published yet. Add your first one above.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </section>
         )}
-
       </main>
 
       {/* Add Product Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowAddModal(false)} aria-label="Close form" style={{ position: "absolute", top: "15px", right: "15px", background: "none", border: 0, cursor: "pointer", zIndex: 10 }}>
+        <div className="fixed inset-0 bg-black/50 z-[999] grid place-items-start sm:place-items-center p-2 sm:p-10 overflow-y-auto" onClick={() => setShowAddModal(false)}>
+          <div className="w-full sm:w-[min(800px,100%)] bg-white relative shadow-2xl rounded-xl sm:rounded-none max-h-[calc(100vh-30px)] sm:max-h-none overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <button className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-transparent border-0 cursor-pointer z-10 min-w-11 min-h-11 flex items-center justify-center" onClick={() => setShowAddModal(false)} aria-label="Close form">
               <X size={24} />
             </button>
-            <section className="new-product-card" id="new-product" style={{ gridTemplateColumns: "1fr", padding: "clamp(25px, 5vw, 50px)" }}>
+            <section className="p-5 sm:p-10 md:p-[50px]">
               <div>
-                <span>{editLookId ? "EDIT EXPERIENCE" : "NEW PIECE"}</span>
-                <h2>{editLookId ? "Edit Experience" : "Add to the collection"}</h2>
-                <p>The image is optimized and stored in Cloudinary. Product details are saved in Neon.</p>
+                <span className="text-[10px] font-semibold tracking-wider text-violet-500">{editLookId ? "EDIT EXPERIENCE" : "NEW PIECE"}</span>
+                <h2 className="font-serif text-[28px] md:text-[38px] my-2">{editLookId ? "Edit Experience" : "Add to the collection"}</h2>
+                <p className="text-neutral-500 leading-relaxed mb-6">The image is optimized and stored in Cloudinary. Product details are saved in Neon.</p>
               </div>
-              <form onSubmit={create}>
-                <label>Product name<input name="name" required placeholder="The Amara Gown" /></label>
-                <label>Price<input name="price" type="number" min="0" step="0.01" required placeholder="1500000" /></label>
-                <label>Currency<select name="currency"><option value="NGN">NGN — ₦</option><option value="USD">USD — $</option><option value="GBP">GBP — £</option></select></label>
-                <label>
+              <form onSubmit={create} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <label className={labelBase}>Product name<input name="name" required placeholder="The Amara Gown" className={inputBase} /></label>
+                <label className={labelBase}>Price<input name="price" type="number" min="0" step="0.01" required placeholder="1500000" className={inputBase} /></label>
+                <label className={labelBase}>Currency
+                  <select name="currency" className={inputBase}>
+                    <option value="NGN">NGN — ₦</option>
+                    <option value="USD">USD — $</option>
+                    <option value="GBP">GBP — £</option>
+                  </select>
+                </label>
+                <label className={labelBase}>
                   Category
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: 6 }}>
+                  <div className="flex gap-2.5 items-center mt-1.5">
                     <select
                       name="category"
                       value={newProductCategory}
                       onChange={(e) => setNewProductCategory(e.target.value)}
                       required
-                      style={{ flex: 1, padding: '13px', border: '1px solid #ddd', background: '#fff' }}
+                      className="flex-1 p-3.5 border border-neutral-300 bg-white normal-case tracking-normal"
                     >
                       <option value="">{categories.length ? "Select category" : "Add a category first"}</option>
                       {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -801,25 +845,39 @@ export default function ProductManager() {
                     <button
                       type="button"
                       onClick={() => setShowCategoryModal(true)}
-                      style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0A0D', color: '#fff', border: 0, cursor: 'pointer' }}
                       aria-label="Add new category"
+                      className="w-12 h-12 flex items-center justify-center bg-[#0B0A0D] text-white border-0 cursor-pointer flex-shrink-0"
                     >
                       <Plus size={18} />
                     </button>
                   </div>
                 </label>
-                <label className="admin-wide">Description<textarea name="description" rows={5} placeholder="Silhouette, materials, handwork and inspiration…" /></label>
-                <label className="admin-upload admin-wide"><ImagePlus /><span>{selectedImages.length ? "Add more product images" : "Choose product images"}</span><small>Select up to 8 JPG, PNG or WebP images · maximum 10MB each. The first image becomes the shop cover.</small><input key={imageInputKey} type="file" accept="image/*" multiple disabled={saving || selectedImages.length >= 8} onChange={(event) => addImages(event.target.files)} /></label>
-                {selectedImages.length > 0 && <div className="admin-image-previews admin-wide">
-                  {selectedImages.map((image, index) => <div key={`${image.file.name}-${image.file.lastModified}-${index}`}>
-                    <img src={image.preview} alt={`Selected product image ${index + 1}`} />
-                    {index === 0 && <span>Cover</span>}
-                    <button type="button" disabled={saving} onClick={() => removeSelectedImage(index)} aria-label={`Remove image ${index + 1}`}><Trash2 size={15} /></button>
-                  </div>)}
-                </div>}
-                <label className="admin-check"><input name="featured" type="checkbox" value="true" /> Feature on homepage</label>
-                <label className="admin-check"><input name="published" type="checkbox" value="true" defaultChecked /> Published</label>
-                <button className="admin-submit" disabled={saving || !newProductCategory || !selectedImages.length}>{saving && <LoaderCircle className="spin" size={15} />}{saving ? `Uploading ${selectedImages.length} image${selectedImages.length === 1 ? "" : "s"}…` : "Publish product"}</button>
+                <label className={`${labelBase} sm:col-span-2`}>Description<textarea name="description" rows={5} placeholder="Silhouette, materials, handwork and inspiration…" className={`${inputBase} normal-case tracking-normal`} /></label>
+                <label className="sm:col-span-2 border border-dashed border-violet-300 p-6 md:p-7.5 flex flex-col items-center gap-2 cursor-pointer text-violet-700">
+                  <ImagePlus />
+                  <span>{selectedImages.length ? "Add more product images" : "Choose product images"}</span>
+                  <small className="text-neutral-400 normal-case tracking-normal text-center">Select up to 8 JPG, PNG or WebP images · maximum 10MB each. The first image becomes the shop cover.</small>
+                  <input key={imageInputKey} type="file" accept="image/*" multiple disabled={saving || selectedImages.length >= 8} onChange={(event) => addImages(event.target.files)} className="border-0 p-2" />
+                </label>
+                {selectedImages.length > 0 && (
+                  <div className="sm:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {selectedImages.map((image, index) => (
+                      <div key={`${image.file.name}-${image.file.lastModified}-${index}`} className="relative aspect-[4/5] overflow-hidden bg-neutral-100">
+                        <img src={image.preview} alt={`Selected product image ${index + 1}`} className="w-full h-full object-cover block" />
+                        {index === 0 && <span className="absolute left-2 top-2 bg-violet-700 text-white px-2 py-1.5 uppercase text-[8px] tracking-wide">Cover</span>}
+                        <button type="button" disabled={saving} onClick={() => removeSelectedImage(index)} aria-label={`Remove image ${index + 1}`} className="absolute right-2 top-2 w-8 h-8 grid place-items-center border-0 bg-white text-rose-800 cursor-pointer disabled:opacity-55 disabled:cursor-wait">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label className="flex-row! items-center gap-2 flex text-xs font-normal normal-case tracking-normal"><input name="featured" type="checkbox" value="true" /> Feature on homepage</label>
+                <label className="flex-row! items-center gap-2 flex text-xs font-normal normal-case tracking-normal"><input name="published" type="checkbox" value="true" defaultChecked /> Published</label>
+                <button className="sm:col-span-2 justify-self-start flex items-center justify-center gap-2 min-w-[170px] bg-neutral-950 text-white border-0 px-6.5 py-4 uppercase text-[10px] tracking-wide disabled:opacity-60 disabled:cursor-not-allowed" disabled={saving || !newProductCategory || !selectedImages.length}>
+                  {saving && <LoaderCircle className="animate-spin" size={15} />}
+                  {saving ? `Uploading ${selectedImages.length} image${selectedImages.length === 1 ? "" : "s"}…` : "Publish product"}
+                </button>
               </form>
             </section>
           </div>
@@ -828,59 +886,59 @@ export default function ProductManager() {
 
       {/* Add Category Modal */}
       {showCategoryModal && (
-        <div className="modal-overlay" onClick={() => setShowCategoryModal(false)} style={{ zIndex: 60 }}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <button className="modal-close" onClick={() => setShowCategoryModal(false)} aria-label="Close form" style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 0, cursor: 'pointer' }}>
+        <div className="fixed inset-0 bg-black/50 z-[60] grid place-items-start sm:place-items-center p-2 sm:p-10 overflow-y-auto" onClick={() => setShowCategoryModal(false)}>
+          <div className="w-full sm:w-[min(400px,100%)] bg-white relative shadow-2xl rounded-xl sm:rounded-none" onClick={(e) => e.stopPropagation()}>
+            <button className="absolute top-5 right-5 bg-transparent border-0 cursor-pointer min-w-11 min-h-11 flex items-center justify-center" onClick={() => setShowCategoryModal(false)} aria-label="Close form">
               <X size={20} />
             </button>
-            <section className="new-product-card" style={{ padding: "clamp(25px, 5vw, 40px)", gridTemplateColumns: "1fr" }}>
+            <section className="p-6 sm:p-8 md:p-10">
               <div>
-                <span style={{ fontSize: 10, letterSpacing: '0.2em', color: '#5B21A8', textTransform: 'uppercase' }}>NEW CATEGORY</span>
-                <h2 style={{ fontSize: 24, margin: '10px 0 20px', fontFamily: 'serif' }}>Add Category</h2>
+                <span className="text-[10px] tracking-[0.2em] text-violet-700 uppercase">NEW CATEGORY</span>
+                <h2 className="font-serif text-2xl my-2.5 mb-5">Add Category</h2>
               </div>
-              <form onSubmit={addCategory}>
-                <label>Category Name<input name="name" required placeholder="e.g. Bridal Couture" autoFocus /></label>
-                <button className="admin-submit" disabled={categorySaving} style={{ marginTop: 15 }}>
-                  {categorySaving ? <LoaderCircle className="spin" size={15} /> : "Save Category"}
+              <form onSubmit={addCategory} className="flex flex-col gap-3">
+                <label className={labelBase}>Category Name<input name="name" required placeholder="e.g. Bridal Couture" autoFocus className={inputBase} /></label>
+                <button className="mt-3.5 flex items-center justify-center gap-2 bg-neutral-950 text-white border-0 px-6.5 py-4 uppercase text-[10px] tracking-wide disabled:opacity-60 disabled:cursor-not-allowed" disabled={categorySaving}>
+                  {categorySaving ? <LoaderCircle className="animate-spin" size={15} /> : "Save Category"}
                 </button>
               </form>
             </section>
           </div>
         </div>
       )}
+
       {/* Delete Confirmation Modal */}
       {lookToDelete && (
-        <div className="modal-overlay" onClick={() => setLookToDelete(null)} style={{ zIndex: 70 }}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420, padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '30px', textAlign: 'center' }}>
-              <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#fff0f0', color: '#ff3b30', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+        <div className="fixed inset-0 bg-black/50 z-[70] grid place-items-center p-5" onClick={() => setLookToDelete(null)}>
+          <div className="w-full sm:w-[min(420px,100%)] bg-white relative p-0 overflow-hidden rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-7.5 text-center">
+              <div className="w-15 h-15 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-5">
                 <Trash2 size={28} />
               </div>
-              <h2 style={{ fontSize: 22, fontFamily: 'serif', margin: '0 0 10px 0', color: '#0B0A0D' }}>Delete Experience?</h2>
-              <p style={{ fontSize: 14, color: '#666', lineHeight: 1.5, margin: 0 }}>
+              <h2 className="text-[22px] font-serif mb-2.5 text-[#0B0A0D]">Delete Experience?</h2>
+              <p className="text-sm text-neutral-500 leading-relaxed">
                 Are you sure you want to permanently delete <strong>"{lookToDelete.title}"</strong> and its {lookToDelete.images?.length || 1} image{lookToDelete.images?.length !== 1 ? 's' : ''} from Cloudinary? This action cannot be undone.
               </p>
             </div>
-            <div style={{ display: 'flex', borderTop: '1px solid #eee' }}>
-              <button 
-                onClick={() => setLookToDelete(null)} 
+            <div className="flex border-t border-neutral-200">
+              <button
+                onClick={() => setLookToDelete(null)}
                 disabled={deletingLook === lookToDelete.id}
-                style={{ flex: 1, padding: '16px', background: '#fff', border: 0, borderRight: '1px solid #eee', fontSize: 13, fontWeight: 600, color: '#555', cursor: 'pointer' }}
+                className="flex-1 p-4 bg-white border-0 border-r border-neutral-200 text-sm font-semibold text-neutral-600 cursor-pointer"
               >
                 Cancel
               </button>
-              <button 
-                onClick={() => removeLook(lookToDelete.id)} 
+              <button
+                onClick={() => removeLook(lookToDelete.id)}
                 disabled={deletingLook === lookToDelete.id}
-                style={{ flex: 1, padding: '16px', background: '#fff0f0', border: 0, fontSize: 13, fontWeight: 600, color: '#ff3b30', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                className="flex-1 p-4 bg-red-50 border-0 text-sm font-semibold text-red-500 cursor-pointer flex items-center justify-center gap-2"
               >
-                {deletingLook === lookToDelete.id ? <><LoaderCircle className="spin" size={16} /> Deleting...</> : "Yes, Delete"}
+                {deletingLook === lookToDelete.id ? <><LoaderCircle className="animate-spin" size={16} /> Deleting...</> : "Yes, Delete"}
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

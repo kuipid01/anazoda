@@ -17,13 +17,22 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
+    const contentType = request.headers.get("content-type") || "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json({ error: "Invalid request format. Please use the form to submit." }, { status: 400 });
+    }
+
     const form = await request.formData();
     const images = form.getAll("images").filter((value): value is File => value instanceof File && value.size > 0);
     if (!images.length || images.some((image) => !image.type.startsWith("image/"))) {
       return NextResponse.json({ error: "At least one valid image is required" }, { status: 400 });
     }
     if (images.length > 8) return NextResponse.json({ error: "A maximum of 8 images is allowed" }, { status: 400 });
-    if (images.some((image) => image.size > 10 * 1024 * 1024)) return NextResponse.json({ error: "Each image must be under 10MB" }, { status: 400 });
+    if (images.some((image) => image.size > 20 * 1024 * 1024)) {
+      const largeImage = images.find(image => image.size > 20 * 1024 * 1024);
+      return NextResponse.json({ error: `"${largeImage?.name || "Image"}" exceeds the 20MB size limit. Please use a smaller file.` }, { status: 400 });
+    }
+
     const uploadedImages = await Promise.all(images.map(uploadProductImage));
     const uploaded = uploadedImages[0];
     const name = String(form.get("name") || "").trim();
@@ -36,6 +45,7 @@ export async function POST(request: Request) {
     await getDb().insert(productImages).values(uploadedImages.map((image, position) => ({ productId: product.id, position, ...image })));
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
+    console.error("Product creation error:", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to create product" }, { status: 500 });
   }
 }

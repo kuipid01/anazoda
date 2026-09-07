@@ -11,7 +11,11 @@ export async function createAdminSession() {
     .setExpirationTime("8h")
     .sign(key());
   (await cookies()).set(COOKIE_NAME, token, {
-    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 8
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
+    maxAge: 60 * 60 * 8
   });
 }
 

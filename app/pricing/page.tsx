@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Explore the investment guidelines for House of Anazodo's bespoke and bridal couture."
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PricingPage() {
   const items = await getActivePricingItems();
 

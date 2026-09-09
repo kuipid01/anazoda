@@ -15,6 +15,13 @@
       "when": 1785172426891,
       "tag": "0001_sturdy_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788958577950,
+      "tag": "0002_bumpy_bullseye",
+      "breakpoints": true
     }
   ]
 }

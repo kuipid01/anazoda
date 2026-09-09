@@ -4,8 +4,9 @@ import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { CheckCircle2, ImagePlus, LoaderCircle, Plus, Trash2, XCircle, X, Info, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
-import type { Category, Product, Look } from "@/lib/db/schema";
+import type { Category, Product, Look, PricingItem } from "@/lib/db/schema";
 import { compressImage } from "@/lib/imageCompression";
+import { createPricingItem, deletePricingItem, getPricingItems, updatePricingItem } from "@/lib/pricing";
 
 // Design tokens (was CSS variables in globals.css):
 // ink: #000000 · rose: #9c27b0 · purple: #5B21A8 · purple-bright: #8B5CF6
@@ -25,13 +26,20 @@ export default function ProductManager() {
   const [lookCategory, setLookCategory] = useState("");
   const [lookPosition, setLookPosition] = useState<number | "">("");
 
+  const [pricingItemsList, setPricingItemsList] = useState<PricingItem[]>([]);
+  const [pricingSaving, setPricingSaving] = useState(false);
+  const [deletingPricing, setDeletingPricing] = useState<string | null>(null);
+  const [editingPricing, setEditingPricing] = useState<PricingItem | null>(null);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [pricingToDelete, setPricingToDelete] = useState<PricingItem | null>(null);
+
   const [newProductCategory, setNewProductCategory] = useState("");
 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const activeTab = (searchParams.get("tab") as "products" | "categories" | "social" | "looks") || "products";
+  const activeTab = (searchParams.get("tab") as "products" | "categories" | "social" | "looks" | "pricing") || "products";
 
   const setActiveTab = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -160,22 +168,25 @@ export default function ProductManager() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [productResponse, categoryResponse, socialResponse, looksResponse] = await Promise.all([
+    const [productResponse, categoryResponse, socialResponse, looksResponse, pricingResponse] = await Promise.all([
       fetch("/api/admin/products"),
       fetch("/api/admin/categories"),
       fetch("/api/admin/social"),
-      fetch("/api/admin/looks")
+      fetch("/api/admin/looks"),
+      fetch("/api/admin/pricing")
     ]);
-    const [productData, categoryData, socialData, looksData] = await Promise.all([
+    const [productData, categoryData, socialData, looksData, pricingData] = await Promise.all([
       productResponse.json(),
       categoryResponse.json(),
       socialResponse.json(),
-      looksResponse.json()
+      looksResponse.json(),
+      pricingResponse.json()
     ]);
     if (productResponse.ok) setProducts(productData); else setError(productData.error);
     if (categoryResponse.ok) setCategories(categoryData); else setError(categoryData.error);
     if (socialResponse.ok) setSocials(socialData); else setError(socialData.error);
     if (looksResponse.ok) setLooks(looksData); else setError(looksData.error);
+    if (pricingResponse.ok) setPricingItemsList(pricingData); else setError(pricingData.error);
     setLoading(false);
   }, []);
 
@@ -442,6 +453,140 @@ export default function ProductManager() {
     }
   }
 
+  async function savePricingItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError("");
+    setPricingSaving(true);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const name = String(formData.get("name") || "").trim();
+    const description = String(formData.get("description") || "").trim();
+    const price = Number(formData.get("price"));
+    const currency = String(formData.get("currency") || "USD").trim();
+    const secondaryPrice = formData.get("secondaryPrice");
+    const secondaryCurrency = String(formData.get("secondaryCurrency") || "NGN").trim();
+    const position = Number(formData.get("position")) || 0;
+    const active = formData.get("active") === "true";
+
+    if (!name) return setToast({ type: "error", message: "Item name is required." });
+    if (isNaN(price) || price < 0) return setToast({ type: "error", message: "Valid price is required." });
+
+    const payload: any = { name, description, price, currency, secondaryCurrency, position, active };
+    if (secondaryPrice !== "") payload.secondaryPrice = Number(secondaryPrice);
+
+    try {
+      const response = await fetch("/api/admin/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPricingItemsList((items) => [...items, data].sort((a, b) => a.position - b.position));
+        form.reset();
+        setShowPricingModal(false);
+        setToast({ type: "success", message: `${name} pricing item was saved.` });
+      } else {
+        setToast({ type: "error", message: data.error || "The pricing item could not be saved." });
+      }
+    } catch {
+      setToast({ type: "error", message: "Could not reach the server. Please try again." });
+    } finally {
+      setPricingSaving(false);
+    }
+  }
+
+  async function updatePricingItemHandler(id: string, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError("");
+    setPricingSaving(true);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const name = String(formData.get("name") || "").trim();
+    const description = String(formData.get("description") || "").trim();
+    const price = Number(formData.get("price"));
+    const currency = String(formData.get("currency") || "USD").trim();
+    const secondaryPrice = formData.get("secondaryPrice");
+    const secondaryCurrency = String(formData.get("secondaryCurrency") || "NGN").trim();
+    const position = Number(formData.get("position")) || 0;
+    const active = formData.get("active") === "true";
+
+    if (!name) return setToast({ type: "error", message: "Item name is required." });
+    if (isNaN(price) || price < 0) return setToast({ type: "error", message: "Valid price is required." });
+
+    const payload: any = { name, description, price, currency, secondaryCurrency, position, active };
+    if (secondaryPrice !== "") payload.secondaryPrice = Number(secondaryPrice);
+
+    try {
+      const response = await fetch(`/api/admin/pricing/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPricingItemsList((items) => items.map((item) => item.id === id ? data : item).sort((a, b) => a.position - b.position));
+        setEditingPricing(null);
+        setShowPricingModal(false);
+        setToast({ type: "success", message: `${name} pricing item was updated.` });
+      } else {
+        setToast({ type: "error", message: data.error || "The pricing item could not be updated." });
+      }
+    } catch {
+      setToast({ type: "error", message: "Could not reach the server. Please try again." });
+    } finally {
+      setPricingSaving(false);
+    }
+  }
+
+  async function removePricingItem(id: string) {
+    const item = pricingItemsList.find((item) => item.id === id);
+    if (!item) return;
+    setPricingToDelete(item);
+  }
+
+  async function confirmRemovePricingItem() {
+    if (!pricingToDelete) return;
+    setDeletingPricing(pricingToDelete.id);
+    try {
+      const response = await fetch(`/api/admin/pricing/${pricingToDelete.id}`, { method: "DELETE" });
+      if (response.ok) {
+        setPricingItemsList((items) => items.filter((item) => item.id !== pricingToDelete.id));
+        setToast({ type: "success", message: `${pricingToDelete.name} was removed.` });
+      } else {
+        setToast({ type: "error", message: (await response.json()).error || "The pricing item could not be removed." });
+      }
+    } catch {
+      setToast({ type: "error", message: "Could not reach the server. Please try again." });
+    } finally {
+      setDeletingPricing(null);
+      setPricingToDelete(null);
+    }
+  }
+
+  function openEditPricing(item: PricingItem) {
+    setEditingPricing(item);
+    setShowPricingModal(true);
+    setTimeout(() => {
+      const form = document.getElementById("pricing-form") as HTMLFormElement;
+      if (form) {
+        (form.elements.namedItem("name") as HTMLInputElement).value = item.name;
+        (form.elements.namedItem("description") as HTMLTextAreaElement).value = item.description || "";
+        (form.elements.namedItem("price") as HTMLInputElement).value = String(item.price);
+        (form.elements.namedItem("currency") as HTMLInputElement).value = item.currency;
+        (form.elements.namedItem("secondaryPrice") as HTMLInputElement).value = item.secondaryPrice ? String(item.secondaryPrice) : "";
+        (form.elements.namedItem("secondaryCurrency") as HTMLInputElement).value = item.secondaryCurrency || "NGN";
+        (form.elements.namedItem("position") as HTMLInputElement).value = String(item.position);
+        (form.elements.namedItem("active") as HTMLInputElement).checked = item.active;
+      }
+    }, 50);
+  }
+
+  function cancelEditPricing() {
+    setEditingPricing(null);
+    setShowPricingModal(false);
+    const form = document.getElementById("pricing-form") as HTMLFormElement;
+    if (form) form.reset();
+  }
+
   const money = (p: Product) => new Intl.NumberFormat("en-NG", { style: "currency", currency: p.currency }).format(p.price / 100);
 
   // Reusable Tailwind class fragments
@@ -487,6 +632,7 @@ export default function ProductManager() {
           <button onClick={() => setActiveTab("categories")} className={navBtn(activeTab === "categories")}>Categories</button>
           <button onClick={() => setActiveTab("social")} className={navBtn(activeTab === "social")}>Social Media</button>
           <button onClick={() => setActiveTab("looks")} className={navBtn(activeTab === "looks")}>Looks &amp; Experiences</button>
+          <button onClick={() => setActiveTab("pricing")} className={navBtn(activeTab === "pricing")}>Pricing Guide</button>
           <a href="/" target="_blank" className="hidden md:inline-block mt-2.5 px-4 py-2 border border-white/20 rounded text-neutral-400 text-xs text-center hover:text-white hover:border-white/50">
             View website ↗
           </a>
@@ -802,9 +948,68 @@ export default function ProductManager() {
                 </div>
               </div>
             </div>
-          </section>
-        )}
-      </main>
+           </section>
+         )}
+         
+         {activeTab === "pricing" && (
+           <section className="bg-white p-5 md:p-10 mb-6">
+             <div>
+               <span className="text-[9px] tracking-[0.16em] text-violet-700">PRICING GUIDE</span>
+               <h2 className="font-serif text-[28px] md:text-[38px] my-2">Pricing Items</h2>
+               <p className="text-neutral-500 leading-relaxed">Manage the pricing items displayed on the Pricing Guide page.</p>
+             </div>
+             <div className="mt-6">
+               <div className="flex flex-wrap gap-2.5 mb-5">
+                 <button onClick={() => { setEditingPricing(null); setShowPricingModal(true); }} className="flex items-center justify-center gap-1.5 border-0 bg-neutral-950 text-white px-4.5 py-3 text-[9px] uppercase tracking-wide cursor-pointer">
+                   <Plus size={15} /> Add Pricing Item
+                 </button>
+               </div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                 {pricingItemsList.length ? pricingItemsList.map((item) => (
+                   <div key={item.id} className={`p-5 border rounded-lg flex flex-col gap-3 ${item.active ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50 opacity-70"}`}>
+                     <div className="flex items-start justify-between gap-3">
+                       <div className="flex flex-col gap-1 min-w-0">
+                         <span className="text-sm font-semibold text-[#0B0A0D] truncate">{item.name}</span>
+                         {item.description && <span className="text-xs text-neutral-500 normal-case tracking-normal line-clamp-2">{item.description}</span>}
+                       </div>
+                       <span className={`text-[9px] uppercase tracking-wider px-2 py-1 rounded border ${item.active ? "border-emerald-200 text-emerald-700 bg-emerald-50" : "border-neutral-200 text-neutral-500 bg-neutral-100"}`}>
+                         {item.active ? "Active" : "Inactive"}
+                       </span>
+                     </div>
+                     <div className="flex items-end justify-between border-t border-dashed border-neutral-200 pt-3">
+                       <div className="flex flex-col">
+                         <span className="text-[10px] text-neutral-400 uppercase tracking-wider">Primary</span>
+                         <span className="text-sm font-semibold text-[#5B21A8]">{item.currency} {item.price.toLocaleString()}</span>
+                       </div>
+                       {item.secondaryPrice && item.secondaryCurrency && (
+                         <div className="flex flex-col text-right">
+                           <span className="text-[10px] text-neutral-400 uppercase tracking-wider">Secondary</span>
+                           <span className="text-xs text-neutral-600">{item.secondaryCurrency} {item.secondaryPrice.toLocaleString()}</span>
+                         </div>
+                       )}
+                     </div>
+                     <div className="flex items-center justify-between border-t border-neutral-100 pt-3">
+                       <span className="text-[10px] text-neutral-400">Position: {item.position}</span>
+                       <div className="flex gap-2">
+                         <button disabled={deletingPricing === item.id} onClick={() => openEditPricing(item)} aria-label={`Edit ${item.name}`} className="flex items-center justify-center p-0 border-0 bg-transparent text-violet-700 cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                           {deletingPricing === item.id ? <LoaderCircle className="animate-spin" size={14} /> : <Pencil size={14} />}
+                         </button>
+                         <button disabled={deletingPricing === item.id} onClick={() => setPricingToDelete(item)} aria-label={`Delete ${item.name}`} className="flex items-center justify-center p-0 border-0 bg-transparent text-rose-800 cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                           {deletingPricing === item.id ? <LoaderCircle className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                         </button>
+                       </div>
+                     </div>
+                   </div>
+                 )) : (
+                   <div className="col-span-full py-16 px-5 text-center bg-[#fbfbfb] border border-dashed border-neutral-300 rounded-xl text-neutral-500">
+                     <Plus size={32} className="mx-auto mb-4 opacity-50" /> No pricing items yet. Add your first one above.
+                   </div>
+                 )}
+               </div>
+             </div>
+           </section>
+         )}
+       </main>
 
       {/* Add Product Modal */}
       {showAddModal && (
@@ -937,8 +1142,98 @@ export default function ProductManager() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+         </div>
+       )}
+
+       {/* Pricing Modal */}
+       {showPricingModal && (
+         <div className="fixed inset-0 bg-black/50 z-[60] grid place-items-start sm:place-items-center p-2 sm:p-10 overflow-y-auto" onClick={() => { setShowPricingModal(false); cancelEditPricing(); }}>
+           <div className="w-full sm:w-[min(500px,100%)] bg-white relative shadow-2xl rounded-xl sm:rounded-none" onClick={(e) => e.stopPropagation()}>
+             <button className="absolute top-5 right-5 bg-transparent border-0 cursor-pointer min-w-11 min-h-11 flex items-center justify-center" onClick={() => { setShowPricingModal(false); cancelEditPricing(); }} aria-label="Close form">
+               <X size={20} />
+             </button>
+             <section className="p-6 sm:p-8 md:p-10">
+               <div>
+                 <span className="text-[10px] tracking-[0.2em] text-violet-700 uppercase">{editingPricing ? "EDIT PRICING" : "NEW PRICING ITEM"}</span>
+                 <h2 className="font-serif text-2xl my-2.5 mb-5">{editingPricing ? "Edit Pricing Item" : "Add Pricing Item"}</h2>
+               </div>
+               <form id="pricing-form" onSubmit={editingPricing ? (e) => updatePricingItemHandler(editingPricing.id, e) : savePricingItem} className="flex flex-col gap-3">
+                 <label className={labelBase}>Item Name<input name="name" required placeholder="e.g. Bespoke Couture" autoFocus className={inputBase} /></label>
+                 <label className={labelBase}>Description<textarea name="description" rows={3} placeholder="Optional description…" className={`${inputBase} normal-case tracking-normal`} /></label>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                   <label className={labelBase}>Price<input name="price" type="number" min="0" step="0.01" required placeholder="1500" className={inputBase} /></label>
+                   <label className={labelBase}>Currency
+                     <select name="currency" className={inputBase}>
+                       <option value="USD">USD — $</option>
+                       <option value="NGN">NGN — ₦</option>
+                       <option value="GBP">GBP — £</option>
+                     </select>
+                   </label>
+                 </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                   <label className={labelBase}>Secondary Price<input name="secondaryPrice" type="number" min="0" step="0.01" placeholder="Optional" className={inputBase} /></label>
+                   <label className={labelBase}>Secondary Currency
+                     <select name="secondaryCurrency" className={inputBase}>
+                       <option value="NGN">NGN — ₦</option>
+                       <option value="USD">USD — $</option>
+                       <option value="GBP">GBP — £</option>
+                     </select>
+                   </label>
+                 </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                   <label className={labelBase}>Display Order<input name="position" type="number" min="0" required placeholder="0" className={inputBase} /></label>
+                   <label className="flex-row! items-center gap-2 flex text-xs font-normal normal-case tracking-normal mt-6">
+                     <input name="active" type="checkbox" value="true" defaultChecked /> Active (visible on storefront)
+                   </label>
+                 </div>
+                 <div className="flex gap-2.5 mt-3.5">
+                   {editingPricing && (
+                     <button type="button" onClick={cancelEditPricing} disabled={pricingSaving} className="p-4 flex-1 flex items-center justify-center border border-neutral-300 bg-white text-neutral-600 text-[11px] uppercase tracking-wide rounded disabled:cursor-not-allowed">
+                       Cancel
+                     </button>
+                   )}
+                   <button type="submit" disabled={pricingSaving} className={`${editingPricing ? "sm:flex-[2]" : ""} p-4 flex items-center justify-center gap-1.5 border-0 text-white text-[11px] uppercase tracking-wide rounded transition-colors ${pricingSaving ? "bg-neutral-300 cursor-not-allowed" : "bg-neutral-950 cursor-pointer"}`}>
+                     {pricingSaving ? <LoaderCircle className="animate-spin" size={15} /> : editingPricing ? "Update Item" : "Add Item"}
+                   </button>
+                 </div>
+               </form>
+             </section>
+           </div>
+          </div>
+        )}
+
+        {/* Delete Pricing Confirmation Modal */}
+        {pricingToDelete && (
+          <div className="fixed inset-0 bg-black/50 z-[70] grid place-items-center p-5" onClick={() => setPricingToDelete(null)}>
+            <div className="w-full sm:w-[min(420px,100%)] bg-white relative p-0 overflow-hidden rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="p-7.5 text-center">
+                <div className="w-15 h-15 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-5">
+                  <Trash2 size={28} />
+                </div>
+                <h2 className="text-[22px] font-serif mb-2.5 text-[#0B0A0D]">Delete Pricing Item?</h2>
+                <p className="text-sm text-neutral-500 leading-relaxed">
+                  Are you sure you want to permanently delete <strong>"{pricingToDelete.name}"</strong>? This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex border-t border-neutral-200">
+                <button
+                  onClick={() => setPricingToDelete(null)}
+                  disabled={deletingPricing === pricingToDelete.id}
+                  className="flex-1 p-4 bg-white border-0 border-r border-neutral-200 text-sm font-semibold text-neutral-600 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRemovePricingItem}
+                  disabled={deletingPricing === pricingToDelete.id}
+                  className="flex-1 p-4 bg-red-50 border-0 text-sm font-semibold text-red-500 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {deletingPricing === pricingToDelete.id ? <><LoaderCircle className="animate-spin" size={16} /> Deleting...</> : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
 }

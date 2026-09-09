@@ -59,3 +59,19 @@ export const looks = pgTable("looks", {
 });
 
 export type Look = typeof looks.$inferSelect;
+
+export const pricingItems = pgTable("pricing_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  price: integer("price").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  secondaryPrice: integer("secondary_price"),
+  secondaryCurrency: text("secondary_currency").default("NGN"),
+  position: integer("position").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+});
+
+export type PricingItem = typeof pricingItems.$inferSelect;
